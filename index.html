@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Gameday Men's Health — Dashboard</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a1a2e;
+      --primary-light: #2a2a4a;
+      --accent: #cc0000;
+      --accent-hover: #a80000;
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --text-muted: #6b7a99;
+      --text-dim: #9ca3af;
+      --border: rgba(0,0,0,0.08);
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #cc0000;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --teal: #0d9488;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* PIN OVERLAY */
+    .pin-overlay {
+      position: fixed; inset: 0; background: #fff; z-index: 9999;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+    }
+    .pin-overlay.hidden { display: none; }
+    .pin-overlay h2 { font-size: 1.5rem; margin-bottom: 8px; color: var(--primary); }
+    .pin-overlay p { color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; }
+    .pin-input {
+      width: 200px; padding: 14px; font-size: 2rem; text-align: center;
+      border: 2px solid var(--border); border-radius: var(--radius);
+      letter-spacing: 12px; font-family: inherit; outline: none;
+    }
+    .pin-input:focus { border-color: var(--accent); }
+    .pin-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none; }
+
+    /* HEADER */
+    .header {
+      background: var(--primary);
+      padding: 20px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-left h1 {
+      color: #fff; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px;
+    }
+    .header-left p { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-top: 2px; }
+    .header-right { display: flex; gap: 10px; align-items: center; }
+    .header-date {
+      color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 500;
+    }
+    .period-select {
+      background: var(--primary-light); color: #fff; border: 1px solid rgba(255,255,255,0.15);
+      padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-family: inherit; cursor: pointer;
+    }
+    .period-select option { background: var(--primary); }
+
+    /* MAIN */
+    .main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    /* SECTION TITLE */
+    .section-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--text-muted); margin: 24px 0 12px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* KPI GRID */
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .kpi-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 16px 18px; box-shadow: var(--shadow);
+      border-left: 4px solid var(--border);
+      transition: transform 0.15s;
+    }
+    .kpi-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+    .kpi-card.accent-green { border-left-color: var(--success); }
+    .kpi-card.accent-blue { border-left-color: var(--blue); }
+    .kpi-card.accent-red { border-left-color: var(--accent); }
+    .kpi-card.accent-purple { border-left-color: var(--purple); }
+    .kpi-card.accent-warning { border-left-color: var(--warning); }
+    .kpi-card.accent-teal { border-left-color: var(--teal); }
+    .kpi-label {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 1.75rem; font-weight: 800; line-height: 1.1;
+    }
+    .kpi-sub {
+      font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;
+    }
+    .kpi-value.green { color: var(--success); }
+    .kpi-value.blue { color: var(--blue); }
+    .kpi-value.red { color: var(--accent); }
+    .kpi-value.purple { color: var(--purple); }
+    .kpi-value.warning { color: var(--warning); }
+    .kpi-value.teal { color: var(--teal); }
+
+    /* SERVICE BREAKDOWN */
+    .service-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .service-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 14px 16px; box-shadow: var(--shadow); text-align: center;
+    }
+    .service-name {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .service-amount { font-size: 1.3rem; font-weight: 800; color: var(--text); }
+    .service-bar {
+      height: 4px; background: var(--bg); border-radius: 2px; margin-top: 8px; overflow: hidden;
+    }
+    .service-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+
+    /* GOAL PROGRESS */
+    .goal-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 20px; box-shadow: var(--shadow);
+    }
+    .goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .goal-title { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+    .goal-numbers { font-size: 0.85rem; color: var(--text-muted); }
+    .goal-numbers span { font-weight: 700; color: var(--text); }
+    .goal-bar {
+      height: 12px; background: var(--bg); border-radius: 6px; overflow: hidden;
+    }
+    .goal-bar-fill {
+      height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--accent), #e74c3c);
+      transition: width 0.8s ease;
+    }
+    .goal-bar-fill.on-track { background: linear-gradient(90deg, var(--success), #22c55e); }
+    .goal-percent {
+      text-align: right; font-size: 0.75rem; font-weight: 700; margin-top: 4px; color: var(--text-muted);
+    }
+
+    /* TREND TABLE */
+    .trend-card {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .trend-table {
+      width: 100%; border-collapse: collapse; font-size: 0.8rem;
+    }
+    .trend-table th {
+      background: var(--primary); color: #fff; padding: 10px 14px;
+      text-align: left; font-weight: 600; font-size: 0.7rem;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .trend-table td {
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+    }
+    .trend-table tr:last-child td { border-bottom: none; }
+    .trend-table tr:hover { background: rgba(0,0,0,0.02); }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    }
+    .badge-new { background: #dcfce7; color: #166534; }
+    .badge-recurring { background: #dbeafe; color: #1e40af; }
+
+    /* CLINICIAN CARD */
+    .clinician-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 20px; box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 20px;
+    }
+    .clinician-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--primary); display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; color: #fff; font-weight: 700; flex-shrink: 0;
+    }
+    .clinician-stats { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .clinician-stat-label {
+      font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted);
+    }
+    .clinician-stat-value { font-size: 1.2rem; font-weight: 800; }
+
+    /* FOOTER */
+    .footer {
+      text-align: center; padding: 20px; font-size: 0.7rem;
+      color: var(--text-dim); margin-top: 20px;
+    }
+
+    /* LOADING */
+    .loading { text-align: center; padding: 40px; color: var(--text-muted); }
+    .loading-spinner {
+      width: 32px; height: 32px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .main { padding: 12px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .service-grid { grid-template-columns: repeat(2, 1fr); }
+      .clinician-card { flex-direction: column; text-align: center; }
+      .clinician-stats { grid-template-columns: repeat(3, 1fr); }
+      .header { padding: 16px; }
+      .header-left h1 { font-size: 1.1rem; }
+      .trend-table { font-size: 0.7rem; }
+      .trend-table th, .trend-table td { padding: 8px 10px; }
+    }
+    @media (max-width: 480px) {
+      .kpi-value { font-size: 1.4rem; }
+      .service-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- PIN OVERLAY -->
+<div class="pin-overlay" id="pin-overlay">
+  <h2>GAMEDAY MENS HEALTH</h2>
+  <p>Enter PIN to access dashboard</p>
+  <input type="password" class="pin-input" id="pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+  <div class="pin-error" id="pin-error">Incorrect PIN. Try again.</div>
+</div>
+
+<!-- HEADER -->
+<header class="header" id="header" style="display:none;">
+  <div class="header-left">
+    <h1>GAMEDAY MENS HEALTH</h1>
+    <p id="location-name">Troy</p>
+  </div>
+  <div class="header-right">
+    <span class="header-date" id="header-date"></span>
+    <select class="period-select" id="period-select" onchange="changePeriod(this.value)">
+      <option value="today">Yesterday</option>
+      <option value="7">Last 7 Days</option>
+      <option value="30" selected>Last 30 Days</option>
+      <option value="mtd">Month to Date</option>
+    </select>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main" id="main-content" style="display:none;">
+
+  <!-- LOADING -->
+  <div class="loading" id="loading">
+    <div class="loading-spinner"></div>
+    <div>Loading dashboard data...</div>
+  </div>
+
+  <!-- DASHBOARD CONTENT -->
+  <div id="dashboard" style="display:none;">
+
+    <!-- REVENUE KPIs -->
+    <div class="section-title">Revenue Overview</div>
+    <div class="kpi-grid">
+      <div class="kpi-card accent-green">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value green" id="kpi-total">$0</div>
+        <div class="kpi-sub" id="kpi-total-sub">0 transactions</div>
+      </div>
+      <div class="kpi-card accent-blue">
+        <div class="kpi-label">New Sales</div>
+        <div class="kpi-value blue" id="kpi-new">$0</div>
+        <div class="kpi-sub" id="kpi-new-sub">0 transactions</div>
+      </div>
+      <div class="kpi-card accent-purple">
+        <div class="kpi-label">Recurring Revenue</div>
+        <div class="kpi-value purple" id="kpi-recurring">$0</div>
+        <div class="kpi-sub" id="kpi-recurring-sub">0 transactions</div>
+      </div>
+      <div class="kpi-card accent-warning">
+        <div class="kpi-label">Avg Transaction</div>
+        <div class="kpi-value warning" id="kpi-avg">$0</div>
+        <div class="kpi-sub" id="kpi-avg-sub">&nbsp;</div>
+      </div>
+      <div class="kpi-card accent-red">
+        <div class="kpi-label">Declined</div>
+        <div class="kpi-value red" id="kpi-declined">0</div>
+        <div class="kpi-sub">&nbsp;</div>
+      </div>
+    </div>
+
+    <!-- MONTHLY GOAL -->
+    <div class="section-title">Monthly Goal</div>
+    <div class="goal-card">
+      <div class="goal-header">
+        <div class="goal-title">Revenue Goal</div>
+        <div class="goal-numbers"><span id="goal-current">$0</span> / <span id="goal-target">$0</span></div>
+      </div>
+      <div class="goal-bar">
+        <div class="goal-bar-fill" id="goal-bar-fill" style="width:0%"></div>
+      </div>
+      <div class="goal-percent" id="goal-percent">0%</div>
+    </div>
+
+    <!-- CLINICIAN PERFORMANCE -->
+    <div class="section-title">Clinician Performance</div>
+    <div class="clinician-card">
+      <div class="clinician-avatar">C</div>
+      <div class="clinician-stats">
+        <div>
+          <div class="clinician-stat-label">New Sales</div>
+          <div class="clinician-stat-value green" id="clin-sales">$0</div>
+        </div>
+        <div>
+          <div class="clinician-stat-label">Hours</div>
+          <div class="clinician-stat-value" id="clin-hours">0</div>
+        </div>
+        <div>
+          <div class="clinician-stat-label">$/Hour</div>
+          <div class="clinician-stat-value blue" id="clin-per-hour">$0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SERVICE BREAKDOWN -->
+    <div class="section-title">Revenue by Service (New Sales)</div>
+    <div class="service-grid" id="service-grid"></div>
+
+    <!-- DAILY TREND TABLE -->
+    <div class="section-title">Daily Trend</div>
+    <div class="trend-card">
+      <table class="trend-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Total</th>
+            <th>New</th>
+            <th>Recurring</th>
+            <th>$/Hr</th>
+            <th>Txn</th>
+          </tr>
+        </thead>
+        <tbody id="trend-body"></tbody>
+      </table>
+    </div>
+
+    <!-- RECENT TRANSACTIONS -->
+    <div class="section-title">Recent Transactions</div>
+    <div class="trend-card">
+      <table class="trend-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Amount</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody id="txn-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer" id="footer" style="display:none;">
+  Powered by AlphaClinic AI &mdash; Gameday Mens Health
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMyODczNjMsImV4cCI6MjA1ODg2MzM2M30.LbdIw_sJAgJFInOdWXWphw_dIkzg8YE';
+  const LOCATION = 'troy';
+  const PIN = '1234';
+  const WEEKLY_HOURS = 40;
+  const DAILY_HOURS = 8;
+  const DEFAULT_MONTHLY_GOAL = 50000;
+
+  const serviceColors = {
+    trt: '#cc0000',
+    glp1: '#2563eb',
+    peptides: '#7c3aed',
+    pshot: '#d97706',
+    gaineswave: '#0d9488',
+    vitamin_shots: '#ec4899',
+    supplements: '#f59e0b',
+    uncategorized: '#9ca3af'
+  };
+  const serviceLabels = {
+    trt: 'TRT',
+    glp1: 'GLP-1',
+    peptides: 'Peptides',
+    pshot: 'P-Shot',
+    gaineswave: 'Gaineswave',
+    vitamin_shots: 'Vitamin Shots',
+    supplements: 'Supplements',
+    uncategorized: 'Other'
+  };
+
+  // PIN check
+  document.getElementById('pin-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') checkPin();
+  });
+  document.getElementById('pin-input').focus();
+
+  function checkPin() {
+    const val = document.getElementById('pin-input').value;
+    if (val === PIN) {
+      document.getElementById('pin-overlay').classList.add('hidden');
+      document.getElementById('header').style.display = '';
+      document.getElementById('main-content').style.display = '';
+      document.getElementById('footer').style.display = '';
+      loadDashboard('30');
+    } else {
+      document.getElementById('pin-error').style.display = 'block';
+      document.getElementById('pin-input').value = '';
+      document.getElementById('pin-input').focus();
+    }
+  }
+
+  function changePeriod(val) {
+    loadDashboard(val);
+  }
+
+  async function supaFetch(table, query) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    return res.json();
+  }
+
+  function $(amt) {
+    if (typeof amt !== 'number' || isNaN(amt)) return '$0';
+    return '$' + amt.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  function $d(amt) {
+    if (typeof amt !== 'number' || isNaN(amt)) return '$0.00';
+    return '$' + amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function getDateRange(period) {
+    const today = new Date();
+    let startDate, endDate;
+    endDate = new Date(today);
+    endDate.setDate(endDate.getDate() - 1); // yesterday
+
+    if (period === 'today') {
+      startDate = new Date(endDate);
+    } else if (period === 'mtd') {
+      startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    } else {
+      const days = parseInt(period);
+      startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - days + 1);
+    }
+    return {
+      start: startDate.toISOString().split('T')[0],
+      end: endDate.toISOString().split('T')[0],
+      days: Math.ceil((endDate - startDate) / 86400000) + 1
+    };
+  }
+
+  async function loadDashboard(period) {
+    document.getElementById('loading').style.display = '';
+    document.getElementById('dashboard').style.display = 'none';
+
+    const range = getDateRange(period);
+    document.getElementById('header-date').textContent = range.start === range.end
+      ? formatDate(range.start)
+      : formatDate(range.start) + ' - ' + formatDate(range.end);
+
+    try {
+      // Fetch daily summaries
+      const dailyData = await supaFetch('daily_sales',
+        `location_slug=eq.${LOCATION}&date=gte.${range.start}&date=lte.${range.end}&order=date.desc`
+      );
+
+      // Fetch recent transactions (last 50)
+      const txnData = await supaFetch('transactions',
+        `location_slug=eq.${LOCATION}&date=gte.${range.start}&date=lte.${range.end}&order=date.desc,amount.desc&limit=50`
+      );
+
+      // Fetch monthly goal
+      const monthStart = range.end.slice(0, 7) + '-01';
+      const goalData = await supaFetch('monthly_goals',
+        `location_slug=eq.${LOCATION}&month=eq.${monthStart}&limit=1`
+      );
+
+      renderDashboard(dailyData, txnData, goalData, range);
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+      document.getElementById('loading').innerHTML = '<div style="color:var(--danger);">Error loading data. Check console.</div>';
+    }
+  }
+
+  function renderDashboard(dailyData, txnData, goalData, range) {
+    // Aggregate totals
+    let totalRevenue = 0, newRevenue = 0, recurringRevenue = 0;
+    let totalTxn = 0, newTxn = 0, recurringTxn = 0, declinedCount = 0;
+    let totalHours = 0;
+    const serviceTotals = {};
+    Object.keys(serviceLabels).forEach(k => serviceTotals[k] = 0);
+
+    for (const day of dailyData) {
+      totalRevenue += parseFloat(day.total_revenue || 0);
+      newRevenue += parseFloat(day.new_revenue || 0);
+      recurringRevenue += parseFloat(day.recurring_revenue || 0);
+      totalTxn += parseInt(day.total_transactions || 0);
+      newTxn += parseInt(day.new_transactions || 0);
+      recurringTxn += parseInt(day.recurring_transactions || 0);
+      declinedCount += parseInt(day.declined_count || 0);
+      totalHours += parseFloat(day.clinician_hours || DAILY_HOURS);
+
+      Object.keys(serviceLabels).forEach(k => {
+        serviceTotals[k] += parseFloat(day['revenue_' + k] || 0);
+      });
+    }
+
+    const avgTxn = totalTxn > 0 ? totalRevenue / totalTxn : 0;
+    const revenuePerHour = totalHours > 0 ? newRevenue / totalHours : 0;
+
+    // KPIs
+    document.getElementById('kpi-total').textContent = $(totalRevenue);
+    document.getElementById('kpi-total-sub').textContent = totalTxn + ' transactions';
+    document.getElementById('kpi-new').textContent = $(newRevenue);
+    document.getElementById('kpi-new-sub').textContent = newTxn + ' transactions';
+    document.getElementById('kpi-recurring').textContent = $(recurringRevenue);
+    document.getElementById('kpi-recurring-sub').textContent = recurringTxn + ' transactions';
+    document.getElementById('kpi-avg').textContent = $d(avgTxn);
+    document.getElementById('kpi-declined').textContent = declinedCount;
+
+    // Goal
+    const goal = goalData && goalData.length > 0 ? parseFloat(goalData[0].revenue_goal || DEFAULT_MONTHLY_GOAL) : DEFAULT_MONTHLY_GOAL;
+    // For MTD goal, use all data for this month
+    const mtdRevenue = totalRevenue;
+    const goalPct = goal > 0 ? Math.min((mtdRevenue / goal) * 100, 100) : 0;
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const dayOfMonth = new Date().getDate() - 1; // yesterday
+    const expectedPct = (dayOfMonth / daysInMonth) * 100;
+    const onTrack = goalPct >= expectedPct * 0.85;
+
+    document.getElementById('goal-current').textContent = $(mtdRevenue);
+    document.getElementById('goal-target').textContent = $(goal);
+    document.getElementById('goal-bar-fill').style.width = goalPct + '%';
+    document.getElementById('goal-bar-fill').className = 'goal-bar-fill' + (onTrack ? ' on-track' : '');
+    document.getElementById('goal-percent').textContent = goalPct.toFixed(1) + '% — ' + (onTrack ? 'On Track' : 'Behind Pace');
+
+    // Clinician
+    document.getElementById('clin-sales').textContent = $(newRevenue);
+    document.getElementById('clin-hours').textContent = totalHours.toFixed(0) + ' hrs';
+    document.getElementById('clin-per-hour').textContent = $d(revenuePerHour);
+
+    // Service breakdown
+    const maxService = Math.max(...Object.values(serviceTotals), 1);
+    const serviceGrid = document.getElementById('service-grid');
+    serviceGrid.innerHTML = '';
+    Object.keys(serviceLabels).forEach(key => {
+      const amt = serviceTotals[key];
+      const pct = maxService > 0 ? (amt / maxService) * 100 : 0;
+      const color = serviceColors[key];
+      serviceGrid.innerHTML += `
+        <div class="service-card">
+          <div class="service-name">${serviceLabels[key]}</div>
+          <div class="service-amount">${$(amt)}</div>
+          <div class="service-bar">
+            <div class="service-bar-fill" style="width:${pct}%;background:${color}"></div>
+          </div>
+        </div>`;
+    });
+
+    // Daily trend
+    const trendBody = document.getElementById('trend-body');
+    trendBody.innerHTML = '';
+    for (const day of dailyData) {
+      const dayHours = parseFloat(day.clinician_hours || DAILY_HOURS);
+      const dayPerHour = dayHours > 0 ? parseFloat(day.new_revenue || 0) / dayHours : 0;
+      trendBody.innerHTML += `
+        <tr>
+          <td>${formatDate(day.date)}</td>
+          <td style="font-weight:700;">${$d(parseFloat(day.total_revenue || 0))}</td>
+          <td style="color:var(--success);font-weight:600;">${$d(parseFloat(day.new_revenue || 0))}</td>
+          <td style="color:var(--blue);font-weight:600;">${$d(parseFloat(day.recurring_revenue || 0))}</td>
+          <td>${$d(dayPerHour)}</td>
+          <td>${day.total_transactions || 0}</td>
+        </tr>`;
+    }
+    if (dailyData.length === 0) {
+      trendBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">No data for this period</td></tr>';
+    }
+
+    // Recent transactions
+    const txnBody = document.getElementById('txn-body');
+    txnBody.innerHTML = '';
+    for (const t of txnData.slice(0, 30)) {
+      const badge = t.revenue_type === 'recurring'
+        ? '<span class="badge badge-recurring">Recurring</span>'
+        : '<span class="badge badge-new">New</span>';
+      const cat = serviceLabels[t.service_category] || t.service_category || '';
+      txnBody.innerHTML += `
+        <tr>
+          <td>${formatDate(t.date)}</td>
+          <td>${escHtml(t.customer_name || '')}</td>
+          <td>${escHtml(cat)}</td>
+          <td style="font-weight:700;">${$d(parseFloat(t.amount || 0))}</td>
+          <td>${badge}</td>
+        </tr>`;
+    }
+    if (txnData.length === 0) {
+      txnBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No transactions for this period</td></tr>';
+    }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('dashboard').style.display = '';
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+</script>
+</body>
+</html>
