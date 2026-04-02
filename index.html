@@ -187,6 +187,7 @@
     }
     .badge-new { background: #dcfce7; color: #166534; }
     .badge-recurring { background: #dbeafe; color: #1e40af; }
+    .badge-declined { background: #fee2e2; color: #991b1b; }
 
     /* CLINICIAN CARD */
     .clinician-card {
@@ -614,17 +615,24 @@
     // Recent transactions
     const txnBody = document.getElementById('txn-body');
     txnBody.innerHTML = '';
-    for (const t of txnData.slice(0, 30)) {
-      const badge = t.revenue_type === 'recurring'
-        ? '<span class="badge badge-recurring">Recurring</span>'
-        : '<span class="badge badge-new">New</span>';
+    for (const t of txnData.slice(0, 50)) {
+      const isDeclined = (t.status || '').toLowerCase() === 'declined';
+      let badge;
+      if (isDeclined) {
+        badge = '<span class="badge badge-declined">Declined</span>';
+      } else if (t.revenue_type === 'recurring') {
+        badge = '<span class="badge badge-recurring">Recurring</span>';
+      } else {
+        badge = '<span class="badge badge-new">New</span>';
+      }
       const cat = serviceLabels[t.service_category] || t.service_category || '';
+      const rowStyle = isDeclined ? ' style="opacity:0.5;"' : '';
       txnBody.innerHTML += `
-        <tr>
+        <tr${rowStyle}>
           <td>${formatDate(t.date)}</td>
           <td>${escHtml(t.customer_name || '')}</td>
           <td>${escHtml(cat)}</td>
-          <td style="font-weight:700;">${$d(parseFloat(t.amount || 0))}</td>
+          <td style="font-weight:700;${isDeclined ? 'text-decoration:line-through;' : ''}">${$d(parseFloat(t.amount || 0))}</td>
           <td>${badge}</td>
         </tr>`;
     }
