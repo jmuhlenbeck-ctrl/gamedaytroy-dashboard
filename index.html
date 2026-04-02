@@ -315,12 +315,21 @@
     <div class="goal-card">
       <div class="goal-header">
         <div class="goal-title">Revenue Goal</div>
-        <div class="goal-numbers"><span id="goal-current">$0</span> / <span id="goal-target">$0</span></div>
+        <div class="goal-numbers"><span id="goal-current">$0</span> / <span id="goal-target" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;" onclick="editGoal()" title="Click to edit">$0</span></div>
       </div>
       <div class="goal-bar">
         <div class="goal-bar-fill" id="goal-bar-fill" style="width:0%"></div>
       </div>
       <div class="goal-percent" id="goal-percent">0%</div>
+      <div id="goal-edit" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span style="font-size:0.8rem;font-weight:600;color:var(--text-muted);">New Goal: $</span>
+          <input type="number" id="goal-input" style="flex:1;padding:8px 12px;border:2px solid var(--border);border-radius:8px;font-size:1rem;font-family:inherit;outline:none;" placeholder="50000" />
+          <button onclick="saveGoal()" style="padding:8px 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:0.85rem;cursor:pointer;font-family:inherit;">Save</button>
+          <button onclick="cancelGoal()" style="padding:8px 12px;background:var(--bg);color:var(--text-muted);border:1px solid var(--border);border-radius:8px;font-size:0.85rem;cursor:pointer;font-family:inherit;">Cancel</button>
+        </div>
+        <div id="goal-save-status" style="font-size:0.75rem;margin-top:6px;color:var(--success);display:none;"></div>
+      </div>
     </div>
 
     <!-- CLINICIAN PERFORMANCE -->
@@ -718,6 +727,91 @@
     d.textContent = str;
     return d.innerHTML;
   }
+
+  // ---- GOAL EDITING ----
+  let currentGoalMonth = null;
+
+  function editGoal() {
+    document.getElementById('goal-edit').style.display = '';
+    document.getElementById('goal-input').value = '';
+    document.getElementById('goal-input').focus();
+    document.getElementById('goal-save-status').style.display = 'none';
+    // Determine which month we're editing
+    const periodVal = document.getElementById('period-select').value;
+    const monthVal = document.getElementById('month-select').value;
+    if (monthVal && monthVal.startsWith('month:')) {
+      currentGoalMonth = monthVal.replace('month:', '') + '-01';
+    } else {
+      const now = new Date();
+      now.setDate(now.getDate() - 1);
+      currentGoalMonth = now.toISOString().split('T')[0].slice(0, 7) + '-01';
+    }
+  }
+
+  function cancelGoal() {
+    document.getElementById('goal-edit').style.display = 'none';
+  }
+
+  async function saveGoal() {
+    const val = parseFloat(document.getElementById('goal-input').value);
+    if (!val || val <= 0) {
+      document.getElementById('goal-save-status').textContent = 'Enter a valid amount';
+      document.getElementById('goal-save-status').style.color = 'var(--danger)';
+      document.getElementById('goal-save-status').style.display = '';
+      return;
+    }
+
+    const statusEl = document.getElementById('goal-save-status');
+    statusEl.textContent = 'Saving...';
+    statusEl.style.color = 'var(--text-muted)';
+    statusEl.style.display = '';
+
+    try {
+      // Upsert goal to Supabase
+      const body = JSON.stringify({
+        location_slug: LOCATION,
+        month: currentGoalMonth,
+        revenue_goal: val
+      });
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/monthly_goals`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body
+      });
+
+      if (res.ok || res.status === 201) {
+        statusEl.textContent = 'Goal saved!';
+        statusEl.style.color = 'var(--success)';
+        // Refresh dashboard after short delay
+        setTimeout(() => {
+          document.getElementById('goal-edit').style.display = 'none';
+          const periodVal = document.getElementById('period-select').value;
+          const monthVal = document.getElementById('month-select').value;
+          loadDashboard(periodVal || monthVal);
+        }, 800);
+      } else {
+        const err = await res.text();
+        console.error('Goal save error:', err);
+        statusEl.textContent = 'Error saving — check console';
+        statusEl.style.color = 'var(--danger)';
+      }
+    } catch (e) {
+      console.error('Goal save error:', e);
+      statusEl.textContent = 'Error saving — check console';
+      statusEl.style.color = 'var(--danger)';
+    }
+  }
+
+  // Allow Enter key to save goal
+  document.getElementById('goal-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') saveGoal();
+    if (e.key === 'Escape') cancelGoal();
+  });
 </script>
 </body>
 </html>
