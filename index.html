@@ -260,9 +260,10 @@
     <span class="header-date" id="header-date"></span>
     <select class="period-select" id="period-select" onchange="changePeriod(this.value)">
       <option value="today">Yesterday</option>
-      <option value="7">Last 7 Days</option>
-      <option value="30" selected>Last 30 Days</option>
-      <option value="mtd">Month to Date</option>
+      <option value="wtd">This Week</option>
+      <option value="mtd" selected>This Month</option>
+    </select>
+    <select class="period-select" id="month-select" onchange="changeMonth(this.value)">
     </select>
   </div>
 </header>
@@ -431,7 +432,7 @@
       document.getElementById('header').style.display = '';
       document.getElementById('main-content').style.display = '';
       document.getElementById('footer').style.display = '';
-      loadDashboard('30');
+      loadDashboard('mtd');
     } else {
       document.getElementById('pin-error').style.display = 'block';
       document.getElementById('pin-input').value = '';
@@ -462,21 +463,81 @@
     return '$' + amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  // Build month selector with last 12 months
+  function buildMonthSelector() {
+    const sel = document.getElementById('month-select');
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const val = d.toISOString().split('T')[0].slice(0, 7); // YYYY-MM
+      const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const opt = document.createElement('option');
+      opt.value = 'month:' + val;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    }
+  }
+  buildMonthSelector();
+
+  let currentMode = 'mtd'; // track which selector is active
+
+  function changeMonth(val) {
+    document.getElementById('period-select').value = '';
+    currentMode = 'month';
+    loadDashboard(val);
+  }
+
+  function changePeriod(val) {
+    // Reset month selector to show current month label
+    const now = new Date();
+    const curMonth = 'month:' + now.toISOString().split('T')[0].slice(0, 7);
+    document.getElementById('month-select').value = curMonth;
+    currentMode = val;
+    loadDashboard(val);
+  }
+
   function getDateRange(period) {
     const today = new Date();
     let startDate, endDate;
-    endDate = new Date(today);
-    endDate.setDate(endDate.getDate() - 1); // yesterday
 
-    if (period === 'today') {
+    if (period && period.startsWith('month:')) {
+      // Specific month: YYYY-MM
+      const ym = period.replace('month:', '');
+      const year = parseInt(ym.split('-')[0]);
+      const month = parseInt(ym.split('-')[1]) - 1;
+      startDate = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      // If current month, end at yesterday; otherwise end at last day of month
+      const isCurrentMonth = (year === today.getFullYear() && month === today.getMonth());
+      if (isCurrentMonth) {
+        endDate = new Date(today);
+        endDate.setDate(endDate.getDate() - 1);
+      } else {
+        endDate = new Date(year, month, lastDay);
+      }
+    } else if (period === 'today') {
+      endDate = new Date(today);
+      endDate.setDate(endDate.getDate() - 1);
       startDate = new Date(endDate);
+    } else if (period === 'wtd') {
+      endDate = new Date(today);
+      endDate.setDate(endDate.getDate() - 1);
+      // Start of current week (Monday)
+      startDate = new Date(endDate);
+      const dow = startDate.getDay();
+      const diff = dow === 0 ? 6 : dow - 1; // Monday = 0 offset
+      startDate.setDate(startDate.getDate() - diff);
     } else if (period === 'mtd') {
+      endDate = new Date(today);
+      endDate.setDate(endDate.getDate() - 1);
       startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
     } else {
-      const days = parseInt(period);
-      startDate = new Date(endDate);
-      startDate.setDate(startDate.getDate() - days + 1);
+      // Fallback
+      endDate = new Date(today);
+      endDate.setDate(endDate.getDate() - 1);
+      startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
     }
+
     return {
       start: startDate.toISOString().split('T')[0],
       end: endDate.toISOString().split('T')[0],
@@ -504,10 +565,10 @@
         `location_slug=eq.${LOCATION}&date=gte.${range.start}&date=lte.${range.end}&order=date.desc,amount.desc&limit=50`
       );
 
-      // Fetch monthly goal
-      const monthStart = range.end.slice(0, 7) + '-01';
+      // Fetch monthly goal for the selected period's month
+      const goalMonth = range.start.slice(0, 7) + '-01';
       const goalData = await supaFetch('monthly_goals',
-        `location_slug=eq.${LOCATION}&month=eq.${monthStart}&limit=1`
+        `location_slug=eq.${LOCATION}&month=eq.${goalMonth}&limit=1`
       );
 
       renderDashboard(dailyData, txnData, goalData, range);
@@ -553,13 +614,15 @@
     document.getElementById('kpi-avg').textContent = $d(avgTxn);
     document.getElementById('kpi-declined').textContent = declinedCount;
 
-    // Goal
+    // Goal — use the month of the selected range
     const goal = goalData && goalData.length > 0 ? parseFloat(goalData[0].revenue_goal || DEFAULT_MONTHLY_GOAL) : DEFAULT_MONTHLY_GOAL;
-    // For MTD goal, use all data for this month
     const mtdRevenue = totalRevenue;
     const goalPct = goal > 0 ? Math.min((mtdRevenue / goal) * 100, 100) : 0;
-    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-    const dayOfMonth = new Date().getDate() - 1; // yesterday
+    // Calculate pace based on selected month
+    const rangeMonth = new Date(range.start + 'T12:00:00');
+    const daysInMonth = new Date(rangeMonth.getFullYear(), rangeMonth.getMonth() + 1, 0).getDate();
+    const isCurrentMonth = (rangeMonth.getFullYear() === new Date().getFullYear() && rangeMonth.getMonth() === new Date().getMonth());
+    const dayOfMonth = isCurrentMonth ? new Date().getDate() - 1 : daysInMonth;
     const expectedPct = (dayOfMonth / daysInMonth) * 100;
     const onTrack = goalPct >= expectedPct * 0.85;
 
