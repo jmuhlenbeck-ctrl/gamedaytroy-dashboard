@@ -767,27 +767,31 @@
     statusEl.style.display = '';
 
     try {
-      // Upsert goal to Supabase
-      const body = JSON.stringify({
-        location_slug: LOCATION,
-        month: currentGoalMonth,
-        revenue_goal: val
-      });
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/monthly_goals`, {
+      const headers = {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      };
+
+      // Try INSERT first
+      let res = await fetch(`${SUPABASE_URL}/rest/v1/monthly_goals`, {
         method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates'
-        },
-        body
+        headers,
+        body: JSON.stringify({ location_slug: LOCATION, month: currentGoalMonth, revenue_goal: val })
       });
 
-      if (res.ok || res.status === 201) {
+      // If duplicate (409), update existing row with PATCH
+      if (res.status === 409) {
+        res = await fetch(`${SUPABASE_URL}/rest/v1/monthly_goals?location_slug=eq.${LOCATION}&month=eq.${currentGoalMonth}`, {
+          method: 'PATCH',
+          headers: { ...headers, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ revenue_goal: val })
+        });
+      }
+
+      if (res.ok || res.status === 201 || res.status === 204) {
         statusEl.textContent = 'Goal saved!';
         statusEl.style.color = 'var(--success)';
-        // Refresh dashboard after short delay
         setTimeout(() => {
           document.getElementById('goal-edit').style.display = 'none';
           const periodVal = document.getElementById('period-select').value;
