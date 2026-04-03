@@ -42,6 +42,24 @@
       line-height: 1.5;
     }
 
+    /* REFRESH BUTTON */
+    .refresh-btn {
+      background: rgba(255,255,255,0.12);
+      border: none;
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+    .refresh-btn.spinning svg { animation: spin 1s linear infinite; }
+    .refresh-btn.done { background: rgba(22,163,74,0.3); }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
     /* QUICK LINKS BAR */
     .quick-links-bar {
       background: var(--primary);
@@ -302,6 +320,9 @@
   </div>
   <div class="header-right">
     <span class="header-date" id="header-date"></span>
+    <button class="refresh-btn" id="refresh-btn" onclick="refreshDashboard()" title="Pull latest revenue data">
+      <svg id="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+    </button>
     <select class="period-select" id="period-select" onchange="changePeriod(this.value)">
       <option value="today">Yesterday</option>
       <option value="wtd">This Week</option>
@@ -597,6 +618,28 @@
       end: endDate.toISOString().split('T')[0],
       days: Math.ceil((endDate - startDate) / 86400000) + 1
     };
+  }
+
+  async function refreshDashboard() {
+    const btn = document.getElementById('refresh-btn');
+    btn.classList.add('spinning');
+    btn.disabled = true;
+    try {
+      // Trigger Agent 8 to pull fresh MXMerchant data into Supabase
+      await fetch('https://n8n.alphaclinicai.com/webhook/refresh-dashboard', { method: 'POST', mode: 'no-cors' });
+      // Wait for pipeline to finish processing
+      await new Promise(r => setTimeout(r, 15000));
+      // Reload dashboard data from Supabase
+      const period = document.getElementById('period-select').value;
+      await loadDashboard(period);
+      btn.classList.remove('spinning');
+      btn.classList.add('done');
+      setTimeout(() => btn.classList.remove('done'), 2000);
+    } catch(e) {
+      console.error('Refresh failed:', e);
+      btn.classList.remove('spinning');
+    }
+    btn.disabled = false;
   }
 
   async function loadDashboard(period) {
