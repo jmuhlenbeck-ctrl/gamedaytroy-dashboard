@@ -573,6 +573,7 @@
 
   function getDateRange(period) {
     const today = new Date();
+    const useToday = includeToday;
     let startDate, endDate;
 
     if (period && period.startsWith('month:')) {
@@ -582,34 +583,36 @@
       const month = parseInt(ym.split('-')[1]) - 1;
       startDate = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0).getDate();
-      // If current month, end at yesterday; otherwise end at last day of month
       const isCurrentMonth = (year === today.getFullYear() && month === today.getMonth());
       if (isCurrentMonth) {
         endDate = new Date(today);
-        endDate.setDate(endDate.getDate() - 1);
+        if (!useToday) endDate.setDate(endDate.getDate() - 1);
       } else {
         endDate = new Date(year, month, lastDay);
       }
     } else if (period === 'today') {
-      endDate = new Date(today);
-      endDate.setDate(endDate.getDate() - 1);
-      startDate = new Date(endDate);
+      if (useToday) {
+        startDate = new Date(today);
+        endDate = new Date(today);
+      } else {
+        endDate = new Date(today);
+        endDate.setDate(endDate.getDate() - 1);
+        startDate = new Date(endDate);
+      }
     } else if (period === 'wtd') {
       endDate = new Date(today);
-      endDate.setDate(endDate.getDate() - 1);
-      // Start of current week (Monday)
+      if (!useToday) endDate.setDate(endDate.getDate() - 1);
       startDate = new Date(endDate);
       const dow = startDate.getDay();
-      const diff = dow === 0 ? 6 : dow - 1; // Monday = 0 offset
+      const diff = dow === 0 ? 6 : dow - 1;
       startDate.setDate(startDate.getDate() - diff);
     } else if (period === 'mtd') {
       endDate = new Date(today);
-      endDate.setDate(endDate.getDate() - 1);
+      if (!useToday) endDate.setDate(endDate.getDate() - 1);
       startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
     } else {
-      // Fallback
       endDate = new Date(today);
-      endDate.setDate(endDate.getDate() - 1);
+      if (!useToday) endDate.setDate(endDate.getDate() - 1);
       startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
     }
 
@@ -620,6 +623,8 @@
     };
   }
 
+  let includeToday = false;
+
   async function refreshDashboard() {
     const btn = document.getElementById('refresh-btn');
     btn.classList.add('spinning');
@@ -629,7 +634,8 @@
       await fetch('https://n8n.alphaclinicai.com/webhook/refresh-dashboard', { method: 'POST', mode: 'no-cors' });
       // Wait for pipeline to finish processing
       await new Promise(r => setTimeout(r, 15000));
-      // Reload dashboard data from Supabase
+      // Reload dashboard data INCLUDING today
+      includeToday = true;
       const period = document.getElementById('period-select').value;
       await loadDashboard(period);
       btn.classList.remove('spinning');
