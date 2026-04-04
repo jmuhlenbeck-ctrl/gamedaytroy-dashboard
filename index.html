@@ -896,15 +896,33 @@
       }
     }
 
-    // Count monthly totals per category from daily_sales data
+    // Count monthly new patients from billing_items (real Lobbie data)
+    // Map billing line item names to service categories
+    function billingToCategory(name) {
+      if (!name) return 'other';
+      const l = name.toLowerCase();
+      if (l.includes('testosterone') || l.includes('trt')) return 'trt';
+      if (l.includes('tirzepatide') || l.includes('semaglutide') || l.includes('glp')) return 'glp1';
+      if (l.includes('gaineswave') || l.includes('gainswave') || l.includes('performance package')) return 'gaineswave';
+      if (l.includes('p-shot') || l.includes('p shot') || l.includes('trimix')) return 'pshot';
+      if (l.includes('peptide') || l.includes('hgh') || l.includes('bpc') || l.includes('sermorelin')) return 'peptides';
+      if (l.includes('vitamin') || l.includes('b12') || l.includes('nad')) return 'vitamin_shots';
+      if (l.includes('supplement') || l.includes('estro') || l.includes('dim')) return 'supplements';
+      if (l.includes('lab') || l.includes('vitals')) return 'labs';
+      if (l.includes('consult')) return 'consult';
+      return 'other';
+    }
     const monthlyPatients = {};
-    for (const day of dailyData) {
-      categoryOrder.forEach(k => {
-        // Map patient section categories to daily_sales columns
-        const pCol = (k === 'other' || k === 'consult' || k === 'labs') ? 'patients_other' : ('patients_' + k);
-        if (k === 'consult' || k === 'labs') return; // these share patients_other, only count once under 'other'
-        monthlyPatients[k] = (monthlyPatients[k] || 0) + parseInt(day[pCol] || 0);
-      });
+    const billing = billingData || [];
+    const seenPatientsByCat = {};
+    for (const b of billing) {
+      const cat = billingToCategory(b.line_item_name);
+      if (!seenPatientsByCat[cat]) seenPatientsByCat[cat] = new Set();
+      const pName = (b.patient_name || '').trim().toLowerCase();
+      if (pName && !seenPatientsByCat[cat].has(pName)) {
+        seenPatientsByCat[cat].add(pName);
+        monthlyPatients[cat] = (monthlyPatients[cat] || 0) + 1;
+      }
     }
 
     let hasAnyPatients = false;
