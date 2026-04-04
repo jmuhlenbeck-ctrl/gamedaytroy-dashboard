@@ -253,6 +253,65 @@
     }
     .clinician-stat-value { font-size: 1.2rem; font-weight: 800; }
 
+    /* PRODUCT BREAKDOWN */
+    .product-card {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 8px; overflow: hidden;
+    }
+    .product-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px;
+    }
+    .product-info { flex: 1; }
+    .product-name { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .product-patient { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+    .product-amount { font-size: 1.1rem; font-weight: 800; color: var(--text); text-align: right; }
+    .product-bar {
+      height: 3px; background: var(--bg);
+    }
+    .product-bar-fill { height: 100%; transition: width 0.5s ease; }
+    .product-empty {
+      text-align: center; color: var(--text-muted); padding: 20px;
+      background: var(--card); border-radius: var(--radius);
+      font-size: 0.85rem;
+    }
+
+    /* PATIENT LIST */
+    .patient-section { margin-top: 8px; }
+    .patient-category {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden;
+    }
+    .patient-category-header {
+      padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none;
+    }
+    .patient-category-header:hover { opacity: 0.85; }
+    .patient-category-title {
+      font-size: 0.8rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .patient-category-count {
+      font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.85);
+      background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 10px;
+    }
+    .patient-list { padding: 0; }
+    .patient-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .patient-item:last-child { border-bottom: none; }
+    .patient-name { font-weight: 600; color: var(--text); }
+    .patient-type { font-size: 0.7rem; color: var(--text-muted); }
+    .patient-status {
+      font-size: 0.65rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+    }
+    .status-checked-out { background: #dcfce7; color: #166534; }
+    .status-checked-in { background: #fef9c3; color: #854d0e; }
+    .status-confirmed { background: #dbeafe; color: #1e40af; }
+    .status-scheduled { background: #f3e8ff; color: #6b21a8; }
+    .status-other { background: #f1f5f9; color: #475569; }
+
     /* FOOTER */
     .footer {
       text-align: center; padding: 20px; font-size: 0.7rem;
@@ -418,8 +477,8 @@
     </div>
 
     <!-- SERVICE BREAKDOWN -->
-    <div class="section-title">Revenue by Service (New Sales)</div>
-    <div class="service-grid" id="service-grid"></div>
+    <div class="section-title">Revenue by Product (New Sales)</div>
+    <div id="product-breakdown"></div>
 
     <!-- DAILY TREND TABLE -->
     <div class="section-title">Daily Trend</div>
@@ -439,22 +498,9 @@
       </table>
     </div>
 
-    <!-- RECENT TRANSACTIONS -->
-    <div class="section-title">Recent Transactions</div>
-    <div class="trend-card">
-      <table class="trend-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Customer</th>
-            <th>Service</th>
-            <th>Amount</th>
-            <th>Type</th>
-          </tr>
-        </thead>
-        <tbody id="txn-body"></tbody>
-      </table>
-    </div>
+    <!-- PATIENT ACTIVITY -->
+    <div class="section-title">Patient Activity</div>
+    <div class="patient-section" id="patient-section"></div>
 
   </div>
 </div>
@@ -668,26 +714,40 @@
         `location_slug=eq.${LOCATION}&date=gte.${range.start}&date=lte.${range.end}&order=date.desc,amount.desc&limit=50`
       );
 
+      // Fetch appointments from Lobbie sync
+      const apptData = await supaFetch('appointments',
+        `location_slug=eq.${LOCATION}&date=gte.${range.start}&date=lte.${range.end}&order=service_category,patient_name`
+      );
+
+      // Fetch billing line items from Lobbie
+      let billingData = [];
+      try {
+        billingData = await supaFetch('billing_items',
+          `location_slug=eq.${LOCATION}&date=gte.${range.start}&date=lte.${range.end}&order=amount_cents.desc`
+        );
+      } catch(e) { console.warn('billing_items not available yet:', e); }
+
       // Fetch monthly goal for the selected period's month
       const goalMonth = range.start.slice(0, 7) + '-01';
       const goalData = await supaFetch('monthly_goals',
         `location_slug=eq.${LOCATION}&month=eq.${goalMonth}&limit=1`
       );
 
-      renderDashboard(dailyData, txnData, goalData, range);
+      renderDashboard(dailyData, txnData, goalData, range, apptData, billingData);
     } catch (err) {
       console.error('Dashboard load error:', err);
       document.getElementById('loading').innerHTML = '<div style="color:var(--danger);">Error loading data. Check console.</div>';
     }
   }
 
-  function renderDashboard(dailyData, txnData, goalData, range) {
+  function renderDashboard(dailyData, txnData, goalData, range, apptData, billingData) {
     // Aggregate totals
     let totalRevenue = 0, newRevenue = 0, recurringRevenue = 0;
     let totalTxn = 0, newTxn = 0, recurringTxn = 0, declinedCount = 0;
     let totalHours = 0;
     const serviceTotals = {};
-    Object.keys(serviceLabels).forEach(k => serviceTotals[k] = 0);
+    const patientCounts = {};
+    Object.keys(serviceLabels).forEach(k => { serviceTotals[k] = 0; patientCounts[k] = 0; });
 
     for (const day of dailyData) {
       totalRevenue += parseFloat(day.total_revenue || 0);
@@ -701,6 +761,8 @@
 
       Object.keys(serviceLabels).forEach(k => {
         serviceTotals[k] += parseFloat(day['revenue_' + k] || 0);
+        const pCol = k === 'uncategorized' ? 'patients_other' : ('patients_' + k);
+        patientCounts[k] += parseInt(day[pCol] || 0);
       });
     }
 
@@ -740,23 +802,48 @@
     document.getElementById('clin-hours').textContent = totalHours.toFixed(0) + ' hrs';
     document.getElementById('clin-per-hour').textContent = $d(revenuePerHour);
 
-    // Service breakdown
-    const maxService = Math.max(...Object.values(serviceTotals), 1);
-    const serviceGrid = document.getElementById('service-grid');
-    serviceGrid.innerHTML = '';
-    Object.keys(serviceLabels).forEach(key => {
-      const amt = serviceTotals[key];
-      const pct = maxService > 0 ? (amt / maxService) * 100 : 0;
-      const color = serviceColors[key];
-      serviceGrid.innerHTML += `
-        <div class="service-card">
-          <div class="service-name">${serviceLabels[key]}</div>
-          <div class="service-amount">${$(amt)}</div>
-          <div class="service-bar">
-            <div class="service-bar-fill" style="width:${pct}%;background:${color}"></div>
-          </div>
-        </div>`;
-    });
+    // Product breakdown - use Lobbie billing line items (real product names)
+    const productDiv = document.getElementById('product-breakdown');
+    productDiv.innerHTML = '';
+    const billing = billingData || [];
+
+    // Color by product type
+    const productColorMap = {
+      'testosterone': '#e94560', 'trt': '#e94560', 'gaineswave': '#3b82f6', 'gw': '#3b82f6',
+      'p-shot': '#a855f7', 'performance': '#a855f7', 'tirzepatide': '#22c55e', 'semaglutide': '#22c55e',
+      'glp': '#22c55e', 'peptide': '#f59e0b', 'hgh': '#f59e0b', 'vitamin': '#14b8a6',
+      'lab': '#78716c', 'estro': '#6366f1', 'dim': '#6366f1', 'supplement': '#6366f1'
+    };
+    function getProductColor(name) {
+      const l = name.toLowerCase();
+      for (const [key, color] of Object.entries(productColorMap)) {
+        if (l.includes(key)) return color;
+      }
+      return '#9ca3af';
+    }
+
+    if (billing.length > 0) {
+      // Use billing line items directly — already filtered to initial payments only
+      const maxAmt = Math.max(...billing.map(b => parseInt(b.amount_cents || 0)), 1);
+      for (const b of billing) {
+        const amt = parseInt(b.amount_cents || 0) / 100;
+        const pct = maxAmt > 0 ? (parseInt(b.amount_cents || 0) / maxAmt) * 100 : 0;
+        const color = getProductColor(b.line_item_name || '');
+        productDiv.innerHTML += `
+          <div class="product-card">
+            <div class="product-row">
+              <div class="product-info">
+                <div class="product-name">${escHtml(b.line_item_name || '')}</div>
+                <div class="product-patient">${escHtml(b.patient_name || '')}</div>
+              </div>
+              <div class="product-amount">${$d(amt)}</div>
+            </div>
+            <div class="product-bar"><div class="product-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+          </div>`;
+      }
+    } else {
+      productDiv.innerHTML = '<div class="product-empty">No billing data — run Lobbie Sync to see product breakdown</div>';
+    }
 
     // Daily trend
     const trendBody = document.getElementById('trend-body');
@@ -778,32 +865,83 @@
       trendBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">No data for this period</td></tr>';
     }
 
-    // Recent transactions
-    const txnBody = document.getElementById('txn-body');
-    txnBody.innerHTML = '';
-    for (const t of txnData.slice(0, 50)) {
-      const isDeclined = (t.status || '').toLowerCase() === 'declined';
-      let badge;
-      if (isDeclined) {
-        badge = '<span class="badge badge-declined">Declined</span>';
-      } else if (t.revenue_type === 'recurring') {
-        badge = '<span class="badge badge-recurring">Recurring</span>';
-      } else {
-        badge = '<span class="badge badge-new">New</span>';
+    // Patient Activity - grouped by service category with real names
+    const patientSection = document.getElementById('patient-section');
+    patientSection.innerHTML = '';
+    const appts = apptData || [];
+
+    // Group appointments by service category, deduplicate by patient name per category
+    const categoryOrder = ['trt', 'glp1', 'gaineswave', 'pshot', 'peptides', 'vitamin_shots', 'supplements', 'consult', 'labs', 'other'];
+    const categoryColors = {
+      trt: '#e94560', glp1: '#22c55e', gaineswave: '#3b82f6', pshot: '#a855f7',
+      peptides: '#f59e0b', vitamin_shots: '#14b8a6', supplements: '#6366f1',
+      consult: '#64748b', labs: '#78716c', other: '#9ca3af'
+    };
+    const categoryNames = {
+      trt: 'TRT', glp1: 'GLP-1', gaineswave: 'GAINSWave', pshot: 'P-Shot',
+      peptides: 'Peptides', vitamin_shots: 'Vitamin Shots', supplements: 'Supplements',
+      consult: 'Consults', labs: 'Labs', other: 'Other'
+    };
+
+    // Build grouped data with unique patients
+    const grouped = {};
+    for (const a of appts) {
+      const cat = a.service_category || 'other';
+      if (!grouped[cat]) grouped[cat] = {};
+      const name = (a.patient_name || 'Unknown').trim();
+      // Keep the best status (prefer Checked Out > Checked In > Confirmed > Scheduled)
+      const statusPriority = {'Checked Out': 4, 'Checked In': 3, 'Confirmed': 2, 'Scheduled': 1};
+      if (!grouped[cat][name] || (statusPriority[a.status_label] || 0) > (statusPriority[grouped[cat][name].status_label] || 0)) {
+        grouped[cat][name] = { appointment_type: a.appointment_type, status_label: a.status_label };
       }
-      const cat = serviceLabels[t.service_category] || t.service_category || '';
-      const rowStyle = isDeclined ? ' style="opacity:0.5;"' : '';
-      txnBody.innerHTML += `
-        <tr${rowStyle}>
-          <td>${formatDate(t.date)}</td>
-          <td>${escHtml(t.customer_name || '')}</td>
-          <td>${escHtml(cat)}</td>
-          <td style="font-weight:700;${isDeclined ? 'text-decoration:line-through;' : ''}">${$d(parseFloat(t.amount || 0))}</td>
-          <td>${badge}</td>
-        </tr>`;
     }
-    if (txnData.length === 0) {
-      txnBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px;">No transactions for this period</td></tr>';
+
+    // Count monthly totals per category from daily_sales data
+    const monthlyPatients = {};
+    for (const day of dailyData) {
+      categoryOrder.forEach(k => {
+        // Map patient section categories to daily_sales columns
+        const pCol = (k === 'other' || k === 'consult' || k === 'labs') ? 'patients_other' : ('patients_' + k);
+        if (k === 'consult' || k === 'labs') return; // these share patients_other, only count once under 'other'
+        monthlyPatients[k] = (monthlyPatients[k] || 0) + parseInt(day[pCol] || 0);
+      });
+    }
+
+    let hasAnyPatients = false;
+    for (const cat of categoryOrder) {
+      if (!grouped[cat] || Object.keys(grouped[cat]).length === 0) continue;
+      hasAnyPatients = true;
+      const patients = Object.entries(grouped[cat]).sort((a, b) => a[0].localeCompare(b[0]));
+      const color = categoryColors[cat] || '#9ca3af';
+      const monthCount = monthlyPatients[cat] || 0;
+      const monthLabel = monthCount > 0 ? ` · ${monthCount} new this month` : '';
+
+      let html = `<div class="patient-category">`;
+      html += `<div class="patient-category-header" style="background:${color};" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">`;
+      html += `<span class="patient-category-title">${categoryNames[cat] || cat}</span>`;
+      html += `<span class="patient-category-count">${patients.length} patient${patients.length !== 1 ? 's' : ''}${monthLabel}</span>`;
+      html += `</div>`;
+      html += `<div class="patient-list" style="display:none;">`;
+
+      for (const [name, info] of patients) {
+        const statusClass = (info.status_label || '').toLowerCase().replace(/\s+/g, '-');
+        const scClass = statusClass === 'checked-out' ? 'status-checked-out' :
+                        statusClass === 'checked-in' ? 'status-checked-in' :
+                        statusClass === 'confirmed' ? 'status-confirmed' :
+                        statusClass === 'scheduled' ? 'status-scheduled' : 'status-other';
+        html += `<div class="patient-item">`;
+        html += `<div><div class="patient-name">${escHtml(name)}</div>`;
+        html += `<div class="patient-type">${escHtml(info.appointment_type || '')}</div></div>`;
+        html += `<span class="patient-status ${scClass}">${escHtml(info.status_label || '')}</span>`;
+        html += `</div>`;
+      }
+
+      html += `</div></div>`;
+      patientSection.innerHTML += html;
+    }
+
+    if (!hasAnyPatients) {
+      patientSection.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No patient data — run Lobbie Sync to populate</div>';
     }
 
     document.getElementById('loading').style.display = 'none';
