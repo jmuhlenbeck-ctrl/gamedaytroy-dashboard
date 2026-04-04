@@ -913,7 +913,6 @@
       return 'other';
     }
     const monthlyPatients = {};
-    const billing = billingData || [];
     const seenPatientsByCat = {};
     for (const b of billing) {
       const cat = billingToCategory(b.line_item_name);
