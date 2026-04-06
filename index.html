@@ -1108,20 +1108,20 @@
     }
 
     // Use transactions table — new sales only (no recurring)
-    const approvedTxns = (txnData || []).filter(t => (t.status === 'Approved' || t.status === 'Settled' || t.status === 'Paid') && t.revenue_type === 'new');
-    const categorizedTxns = approvedTxns.filter(t => t.product_description && t.product_description !== 'N/A');
+    const newSales = (txnData || []).filter(t => (t.status === 'Approved' || t.status === 'Settled' || t.status === 'Paid') && t.revenue_type === 'new');
 
-    if (categorizedTxns.length > 0) {
-      const maxAmt = Math.max(...categorizedTxns.map(t => parseFloat(t.amount || 0)), 1);
-      for (const t of categorizedTxns) {
+    if (newSales.length > 0) {
+      const maxAmt = Math.max(...newSales.map(t => parseFloat(t.amount || 0)), 1);
+      for (const t of newSales) {
         const amt = parseFloat(t.amount || 0);
         const pct = maxAmt > 0 ? (amt / maxAmt) * 100 : 0;
-        const color = getProductColor(t.product_description || '');
+        const desc = (t.product_description && t.product_description !== 'N/A') ? t.product_description : 'New Sale';
+        const color = getProductColor(desc);
         productDiv.innerHTML += `
           <div class="product-card">
             <div class="product-row">
               <div class="product-info">
-                <div class="product-name">${escHtml(t.product_description || '')}</div>
+                <div class="product-name">${escHtml(desc)}</div>
                 <div class="product-patient">${escHtml(t.customer_name || '')}</div>
               </div>
               <div class="product-amount">${$d(amt)}</div>
@@ -1129,10 +1129,8 @@
             <div class="product-bar"><div class="product-bar-fill" style="width:${pct}%;background:${color}"></div></div>
           </div>`;
       }
-    } else if (approvedTxns.length > 0) {
-      productDiv.innerHTML = '<div class="product-empty">Transactions found but no product details — Lobbie billing sync may be needed</div>';
     } else {
-      productDiv.innerHTML = '<div class="product-empty">No transaction data for this period</div>';
+      productDiv.innerHTML = '<div class="product-empty">No new sales for this period</div>';
     }
 
     // Daily trend
