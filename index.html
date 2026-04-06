@@ -1187,6 +1187,7 @@
     }
 
     // Count monthly new patients from billing_items (real Lobbie data)
+    const billing = billingData || [];
     // Map billing line item names to service categories
     function billingToCategory(name) {
       if (!name) return 'other';
