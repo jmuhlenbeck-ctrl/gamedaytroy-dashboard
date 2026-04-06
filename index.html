@@ -344,84 +344,88 @@
       .service-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
-    /* PATIENT TOUCHPOINT / RETENTION SECTION */
-    .tp-tabs { display: flex; gap: 0; margin-bottom: 12px; }
-    .tp-tab {
+    /* PATIENT RETENTION TRACKER — Task List Style */
+    .rt-tabs { display: flex; gap: 0; margin-bottom: 12px; }
+    .rt-tab {
       padding: 8px 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
       border: none; background: var(--card); color: var(--text-muted);
       border-bottom: 3px solid transparent; transition: all 0.15s;
     }
-    .tp-tab:first-child { border-radius: var(--radius) 0 0 0; }
-    .tp-tab:last-child { border-radius: 0 var(--radius) 0 0; }
-    .tp-tab:hover { color: var(--text); }
-    .tp-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tp-tab-content { display: none; }
-    .tp-tab-content.active { display: block; }
-    .tp-list { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-    .tp-list-header {
-      display: grid; grid-template-columns: 2fr 1.5fr 1fr 100px;
-      padding: 10px 16px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.5px; color: var(--text-muted); background: var(--bg); border-bottom: 1px solid var(--border);
+    .rt-tab:first-child { border-radius: var(--radius) 0 0 0; }
+    .rt-tab:last-child { border-radius: 0 var(--radius) 0 0; }
+    .rt-tab:hover { color: var(--text); }
+    .rt-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .rt-tab-content { display: none; }
+    .rt-tab-content.active { display: block; }
+    .rt-list { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .rt-item {
+      display: flex; align-items: center; padding: 12px 16px; gap: 12px;
+      border-bottom: 1px solid var(--border); transition: background 0.1s;
     }
-    .tp-row {
-      display: grid; grid-template-columns: 2fr 1.5fr 1fr 100px;
-      padding: 12px 16px; align-items: center; border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
-    }
-    .tp-row:last-child { border-bottom: none; }
-    .tp-row:hover { background: #f8f9fb; }
-    .tp-row .tp-patient { font-weight: 600; font-size: 0.85rem; }
-    .tp-row .tp-type-badge {
+    .rt-item:last-child { border-bottom: none; }
+    .rt-item:hover { background: #f8f9fb; }
+    .rt-item .rt-name { font-weight: 600; font-size: 0.85rem; flex: 1; }
+    .rt-item .rt-meta { font-size: 0.72rem; color: var(--text-muted); }
+    .rt-type-badge {
       display: inline-block; padding: 2px 8px; border-radius: 10px;
-      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-left: 6px;
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
     }
-    .tp-type-badge.trt { background: #dbeafe; color: #1e40af; }
-    .tp-type-badge.glp1 { background: #f3e8ff; color: #6b21a8; }
-    .tp-row .tp-touchpoint { font-size: 0.8rem; color: var(--text-muted); }
-    .tp-row .tp-purpose { font-size: 0.7rem; color: var(--text-dim); }
-    .tp-row .tp-due { font-size: 0.8rem; }
-    .tp-badge {
+    .rt-type-badge.trt { background: #dbeafe; color: #1e40af; }
+    .rt-type-badge.glp1 { background: #f3e8ff; color: #6b21a8; }
+    .rt-badge {
       display: inline-block; padding: 2px 8px; border-radius: 10px;
-      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; white-space: nowrap;
     }
-    .tp-badge.overdue { background: #fef2f2; color: var(--danger); }
-    .tp-badge.today { background: #fefce8; color: var(--warning); }
-    .tp-badge.soon { background: #eff6ff; color: var(--blue); }
-    .tp-badge.on-track { background: #f0fdf4; color: var(--success); }
-    .tp-btn-done {
+    .rt-badge.overdue { background: #fef2f2; color: var(--danger); }
+    .rt-badge.due { background: #fefce8; color: var(--warning); }
+    .rt-badge.upcoming { background: #eff6ff; color: var(--blue); }
+    .rt-badge.ok { background: #f0fdf4; color: var(--success); }
+    .rt-btn {
       padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 600;
       border: 1px solid var(--border); background: #fff; color: var(--text-muted);
-      cursor: pointer; transition: all 0.15s;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
     }
-    .tp-btn-done:hover { background: var(--success); color: #fff; border-color: var(--success); }
-    .tp-btn-skip {
-      padding: 5px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 600;
-      border: none; background: transparent; color: var(--text-dim); cursor: pointer;
-    }
-    .tp-btn-skip:hover { color: var(--danger); }
-    .tp-empty {
+    .rt-btn:hover { background: var(--success); color: #fff; border-color: var(--success); }
+    .rt-btn.churned { border-color: transparent; background: transparent; color: var(--text-dim); }
+    .rt-btn.churned:hover { background: var(--danger); color: #fff; }
+    .rt-empty {
       text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 0.85rem;
       background: var(--card); border-radius: var(--radius);
     }
-    /* Patient detail rows (expandable) */
-    .tp-detail-row {
-      display: none; padding: 0 16px 12px; background: #fafbfc;
-      border-bottom: 1px solid var(--border);
+    .rt-add-btn {
+      padding: 8px 18px; border-radius: 8px; font-size: 0.8rem; font-weight: 700;
+      border: none; background: var(--accent); color: #fff; cursor: pointer;
+      transition: all 0.15s;
     }
-    .tp-detail-row.open { display: block; }
-    .tp-timeline-item {
-      display: flex; align-items: center; gap: 10px; padding: 6px 10px;
-      border-radius: 6px; font-size: 0.78rem; margin: 3px 0; background: #fff;
+    .rt-add-btn:hover { background: #2d8cf0; transform: translateY(-1px); }
+    .rt-modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 9999; align-items: center; justify-content: center;
     }
-    .tp-timeline-item.done { opacity: 0.45; }
-    .tp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .tp-dot.pending { background: var(--text-dim); }
-    .tp-dot.completed { background: var(--success); }
-    .tp-dot.overdue { background: var(--danger); }
-    .tp-dot.today { background: var(--warning); }
+    .rt-modal-overlay.open { display: flex; }
+    .rt-modal {
+      background: #fff; border-radius: 14px; padding: 28px 32px; width: 380px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+    .rt-modal h3 { margin: 0 0 18px; font-size: 1.05rem; }
+    .rt-modal label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+    .rt-modal input, .rt-modal select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.85rem; margin-bottom: 14px; box-sizing: border-box;
+    }
+    .rt-modal input:focus, .rt-modal select:focus { outline: none; border-color: var(--accent); }
+    .rt-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+    .rt-modal-actions button {
+      padding: 9px 22px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border); transition: all 0.15s;
+    }
+    .rt-modal-actions .rt-save { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .rt-modal-actions .rt-save:hover { background: #2d8cf0; }
+    .rt-modal-actions .rt-cancel { background: #fff; color: var(--text-muted); }
+    .rt-modal-actions .rt-cancel:hover { background: #f5f5f5; }
     @media (max-width: 768px) {
-      .tp-list-header, .tp-row { grid-template-columns: 1.5fr 1fr 80px; }
-      .tp-row .tp-touchpoint { display: none; }
+      .rt-item { flex-wrap: wrap; }
+      .rt-item .rt-name { min-width: 60%; }
     }
 
     /* SEO SECTION */
@@ -644,79 +648,78 @@
     <div class="section-title">Patient Activity</div>
     <div class="patient-section" id="patient-section"></div>
 
-    <!-- PATIENT TOUCHPOINT / RETENTION TRACKER -->
+    <!-- PATIENT RETENTION TRACKER -->
     <div id="retention-section" style="margin-top:32px;">
-      <div class="section-title">Patient Retention Tracker</div>
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+        Patient Retention Tracker
+        <button class="rt-add-btn" onclick="document.getElementById('rt-add-date').value=new Date().toISOString().split('T')[0];document.getElementById('rt-add-modal').classList.add('open')">+ Add Patient</button>
+      </div>
 
-      <!-- Retention KPIs -->
+      <!-- Add Patient Modal -->
+      <div class="rt-modal-overlay" id="rt-add-modal">
+        <div class="rt-modal">
+          <h3>Add Patient</h3>
+          <label>Patient Name</label>
+          <input type="text" id="rt-add-name" placeholder="First Last">
+          <label>Service Type</label>
+          <select id="rt-add-type">
+            <option value="trt">TRT</option>
+            <option value="glp1">GLP-1</option>
+          </select>
+          <label>Start Date</label>
+          <input type="date" id="rt-add-date">
+          <div class="rt-modal-actions">
+            <button class="rt-cancel" onclick="document.getElementById('rt-add-modal').classList.remove('open')">Cancel</button>
+            <button class="rt-save" onclick="rtAddPatient()">Add</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI row -->
       <div class="kpi-grid">
         <div class="kpi-card accent-blue">
           <div class="kpi-label">Active TRT</div>
-          <div class="kpi-value blue" id="tp-kpi-trt">-</div>
+          <div class="kpi-value blue" id="rt-kpi-trt">-</div>
         </div>
         <div class="kpi-card accent-purple">
           <div class="kpi-label">Active GLP-1</div>
-          <div class="kpi-value purple" id="tp-kpi-glp1">-</div>
+          <div class="kpi-value purple" id="rt-kpi-glp1">-</div>
         </div>
         <div class="kpi-card accent-warning">
-          <div class="kpi-label">Due This Week</div>
-          <div class="kpi-value" style="color:var(--warning)" id="tp-kpi-due">-</div>
+          <div class="kpi-label">Due Now</div>
+          <div class="kpi-value" style="color:var(--warning)" id="rt-kpi-due">-</div>
         </div>
         <div class="kpi-card accent-red">
           <div class="kpi-label">Overdue</div>
-          <div class="kpi-value" style="color:var(--danger)" id="tp-kpi-overdue">-</div>
+          <div class="kpi-value" style="color:var(--danger)" id="rt-kpi-overdue">-</div>
         </div>
       </div>
 
-      <!-- Tabs: Action Items | TRT | GLP-1 -->
-      <div class="tp-tabs" style="margin-top:16px;">
-        <button class="tp-tab active" data-tptab="action">Action Items</button>
-        <button class="tp-tab" data-tptab="trt">TRT Patients</button>
-        <button class="tp-tab" data-tptab="glp1">GLP-1 Patients</button>
+      <!-- Tabs -->
+      <div class="rt-tabs" style="margin-top:16px;">
+        <button class="rt-tab active" data-rttab="due">Due Now</button>
+        <button class="rt-tab" data-rttab="trt">TRT Patients</button>
+        <button class="rt-tab" data-rttab="glp1">GLP-1 Patients</button>
       </div>
 
-      <!-- Action Items Tab -->
-      <div class="tp-tab-content active" id="tptab-action">
-        <div class="tp-list">
-          <div class="tp-list-header">
-            <span>Patient</span>
-            <span>Touchpoint</span>
-            <span>Due</span>
-            <span>Actions</span>
-          </div>
-          <div id="tp-action-rows">
-            <div class="tp-empty">Loading touchpoint data...</div>
-          </div>
+      <!-- Due Now Tab -->
+      <div class="rt-tab-content active" id="rttab-due">
+        <div class="rt-list" id="rt-due-list">
+          <div class="rt-empty">Loading retention data...</div>
         </div>
       </div>
 
       <!-- TRT Tab -->
-      <div class="tp-tab-content" id="tptab-trt">
-        <div class="tp-list">
-          <div class="tp-list-header">
-            <span>Patient</span>
-            <span>Next Touchpoint</span>
-            <span>Last Visit</span>
-            <span>Status</span>
-          </div>
-          <div id="tp-trt-rows">
-            <div class="tp-empty">No TRT patients tracked yet.</div>
-          </div>
+      <div class="rt-tab-content" id="rttab-trt">
+        <div class="rt-list" id="rt-trt-list">
+          <div class="rt-empty">Loading...</div>
         </div>
       </div>
 
       <!-- GLP-1 Tab -->
-      <div class="tp-tab-content" id="tptab-glp1">
-        <div class="tp-list">
-          <div class="tp-list-header">
-            <span>Patient</span>
-            <span>Next Touchpoint</span>
-            <span>Last Visit</span>
-            <span>Status</span>
-          </div>
-          <div id="tp-glp1-rows">
-            <div class="tp-empty">No GLP-1 patients tracked yet.</div>
-          </div>
+      <div class="rt-tab-content" id="rttab-glp1">
+        <div class="rt-list" id="rt-glp1-list">
+          <div class="rt-empty">Loading...</div>
         </div>
       </div>
     </div>
@@ -1513,169 +1516,185 @@
     }).join('');
   }
 
-  // ---- PATIENT TOUCHPOINT / RETENTION TRACKER ----
+  // ---- PATIENT RETENTION TRACKER ----
 
-  // Tab switching
-  document.querySelectorAll('.tp-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tp-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tp-tab-content').forEach(c => c.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('tptab-' + tab.dataset.tptab).classList.add('active');
-    });
-  });
+  // ============ RETENTION TRACKER (Dynamic Touchpoints) ============
+  let rtPatients = [];
 
-  let tpPatients = [];
-  let tpTouchpoints = [];
+  function rtNextDue(p) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const start = p.start_date ? new Date(p.start_date + 'T00:00:00') : null;
+    const last = p.last_touchpoint_date ? new Date(p.last_touchpoint_date + 'T00:00:00') : null;
 
-  function tpDaysDiff(dateStr) {
-    const now = new Date(); now.setHours(0,0,0,0);
-    const d = new Date(dateStr + 'T00:00:00');
-    return Math.floor((d - now) / (1000*60*60*24));
+    if (p.service_type === 'trt') {
+      if (!last && start) {
+        // First touchpoint: check-in call at 14 days
+        const d = new Date(start); d.setDate(d.getDate() + 14);
+        return { date: d, label: 'Check-in Call' };
+      }
+      // After first: every 90 days from last touchpoint
+      const base = last || start || today;
+      const d = new Date(base); d.setDate(d.getDate() + 90);
+      return { date: d, label: 'Quarterly Check-in' };
+    }
+
+    if (p.service_type === 'glp1') {
+      // Every 28 days from last touchpoint or start
+      const base = last || start || today;
+      const d = new Date(base); d.setDate(d.getDate() + 28);
+      return { date: d, label: 'Monthly Check-in' };
+    }
+
+    return { date: today, label: 'Check-in' };
   }
-  function tpFmtDate(dateStr) {
-    if (!dateStr) return '-';
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  function rtDaysDiff(date) {
+    const now = new Date(); now.setHours(0,0,0,0);
+    return Math.round((date - now) / 86400000);
+  }
+
+  function rtBadge(diff) {
+    if (diff < 0) return `<span class="rt-badge overdue">Overdue ${Math.abs(diff)}d</span>`;
+    if (diff === 0) return `<span class="rt-badge due">Due Today</span>`;
+    if (diff <= 7) return `<span class="rt-badge upcoming">In ${diff}d</span>`;
+    return `<span class="rt-badge ok">In ${diff}d</span>`;
+  }
+
+  function rtRenderItem(p, next) {
+    const diff = rtDaysDiff(next.date);
+    const typeLabel = p.service_type === 'trt' ? 'TRT' : 'GLP-1';
+    const dueDateStr = next.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    return `<div class="rt-item">
+      <div class="rt-name">${escHtml(p.patient_name)}</div>
+      <div class="rt-meta">
+        <span class="rt-type-badge ${p.service_type}">${typeLabel}</span>
+        ${next.label} &middot; ${dueDateStr}
+        ${rtBadge(diff)}
+      </div>
+      <div style="display:flex;gap:6px;margin-left:auto;flex-shrink:0;">
+        <button class="rt-btn" onclick="rtMarkDone('${p.id}')">Done</button>
+        <button class="rt-btn churned" onclick="rtMarkChurned('${p.id}','${escHtml(p.patient_name)}')">Churned</button>
+      </div>
+    </div>`;
   }
 
   async function loadRetentionTracker() {
     try {
-      const [patients, touchpoints] = await Promise.all([
-        supaFetch('patient_tracker', 'location_slug=eq.troy&status=eq.active&order=patient_name'),
-        supaFetch('patient_touchpoints', 'status=in.(pending,overdue)&order=due_date.asc')
-      ]);
-      tpPatients = patients || [];
-      tpTouchpoints = touchpoints || [];
+      const patients = await supaFetch('patient_tracker', 'location_slug=eq.troy&status=eq.active&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name');
+      rtPatients = (patients || []).map(p => {
+        p._next = rtNextDue(p);
+        p._diff = rtDaysDiff(p._next.date);
+        return p;
+      });
 
-      // Filter touchpoints to our patients
-      const pIds = new Set(tpPatients.map(p => p.id));
-      tpTouchpoints = tpTouchpoints.filter(tp => pIds.has(tp.patient_id));
+      // KPIs
+      const trt = rtPatients.filter(p => p.service_type === 'trt');
+      const glp1 = rtPatients.filter(p => p.service_type === 'glp1');
+      const overdue = rtPatients.filter(p => p._diff < 0);
+      const dueNow = rtPatients.filter(p => p._diff <= 7);
 
-      renderRetentionKPIs();
-      renderActionItems();
-      renderPatientList('trt', 'tp-trt-rows');
-      renderPatientList('glp1', 'tp-glp1-rows');
+      document.getElementById('rt-kpi-trt').textContent = trt.length;
+      document.getElementById('rt-kpi-glp1').textContent = glp1.length;
+      document.getElementById('rt-kpi-due').textContent = dueNow.length;
+      document.getElementById('rt-kpi-overdue').textContent = overdue.length;
+
+      // Due Now tab — overdue + due within 7 days, sorted by urgency
+      const dueList = document.getElementById('rt-due-list');
+      const dueItems = dueNow.sort((a,b) => a._diff - b._diff);
+      if (dueItems.length === 0) {
+        dueList.innerHTML = '<div class="rt-empty">All caught up! No patients due this week.</div>';
+      } else {
+        dueList.innerHTML = dueItems.map(p => rtRenderItem(p, p._next)).join('');
+      }
+
+      // TRT tab
+      const trtList = document.getElementById('rt-trt-list');
+      const trtSorted = trt.sort((a,b) => a._diff - b._diff);
+      if (trtSorted.length === 0) {
+        trtList.innerHTML = '<div class="rt-empty">No TRT patients tracked yet.</div>';
+      } else {
+        trtList.innerHTML = trtSorted.map(p => rtRenderItem(p, p._next)).join('');
+      }
+
+      // GLP-1 tab
+      const glp1List = document.getElementById('rt-glp1-list');
+      const glp1Sorted = glp1.sort((a,b) => a._diff - b._diff);
+      if (glp1Sorted.length === 0) {
+        glp1List.innerHTML = '<div class="rt-empty">No GLP-1 patients tracked yet.</div>';
+      } else {
+        glp1List.innerHTML = glp1Sorted.map(p => rtRenderItem(p, p._next)).join('');
+      }
+
     } catch(e) {
       console.warn('Retention tracker load error:', e);
     }
   }
 
-  function renderRetentionKPIs() {
-    const trt = tpPatients.filter(p => p.service_type === 'trt').length;
-    const glp1 = tpPatients.filter(p => p.service_type === 'glp1').length;
-    const now = new Date(); now.setHours(0,0,0,0);
-    const eow = new Date(now); eow.setDate(eow.getDate() + (7 - eow.getDay()));
+  // Tab switching
+  document.querySelectorAll('.rt-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.rt-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.rt-tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('rttab-' + btn.dataset.rttab).classList.add('active');
+    });
+  });
 
-    const dueWeek = tpTouchpoints.filter(tp => {
-      const d = new Date(tp.due_date + 'T00:00:00');
-      return d <= eow;
-    }).length;
-    const overdue = tpTouchpoints.filter(tp => tpDaysDiff(tp.due_date) < 0).length;
-
-    document.getElementById('tp-kpi-trt').textContent = trt;
-    document.getElementById('tp-kpi-glp1').textContent = glp1;
-    document.getElementById('tp-kpi-due').textContent = dueWeek;
-    document.getElementById('tp-kpi-overdue').textContent = overdue;
-  }
-
-  function renderActionItems() {
-    const container = document.getElementById('tp-action-rows');
-    // Show overdue + due within 7 days
-    const items = tpTouchpoints
-      .filter(tp => tpDaysDiff(tp.due_date) <= 7)
-      .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
-
-    if (items.length === 0) {
-      container.innerHTML = '<div class="tp-empty">All caught up! No touchpoints due this week.</div>';
-      return;
-    }
-
-    container.innerHTML = items.map(tp => {
-      const p = tpPatients.find(pt => pt.id === tp.patient_id);
-      if (!p) return '';
-      const diff = tpDaysDiff(tp.due_date);
-      let badge, dueText;
-      if (diff < 0) { badge = '<span class="tp-badge overdue">Overdue</span>'; dueText = Math.abs(diff) + 'd ago'; }
-      else if (diff === 0) { badge = '<span class="tp-badge today">Today</span>'; dueText = 'Today'; }
-      else { badge = '<span class="tp-badge soon">' + diff + 'd</span>'; dueText = tpFmtDate(tp.due_date); }
-      const typeBadge = `<span class="tp-type-badge ${p.service_type}">${p.service_type === 'trt' ? 'TRT' : 'GLP-1'}</span>`;
-
-      return `<div class="tp-row">
-        <div><span class="tp-patient">${escHtml(p.patient_name)}</span>${typeBadge}</div>
-        <div><div class="tp-touchpoint">${escHtml(tp.touchpoint_name)}</div><div class="tp-purpose">${escHtml(tp.purpose || '')}</div></div>
-        <div class="tp-due">${dueText} ${badge}</div>
-        <div>
-          <button class="tp-btn-done" onclick="tpMarkDone('${tp.id}')">Done</button>
-          <button class="tp-btn-skip" onclick="tpMarkSkip('${tp.id}')">Skip</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  function renderPatientList(serviceType, containerId) {
-    const container = document.getElementById(containerId);
-    const filtered = tpPatients.filter(p => p.service_type === serviceType);
-
-    if (filtered.length === 0) {
-      container.innerHTML = `<div class="tp-empty">No ${serviceType === 'trt' ? 'TRT' : 'GLP-1'} patients tracked yet. Patients auto-enroll from Lobbie appointments.</div>`;
-      return;
-    }
-
-    container.innerHTML = filtered.map(p => {
-      const pTps = tpTouchpoints.filter(tp => tp.patient_id === p.id);
-      const next = pTps[0]; // Already sorted by due_date
-      const hasOverdue = pTps.some(tp => tpDaysDiff(tp.due_date) < 0);
-
-      let statusBadge;
-      if (hasOverdue) statusBadge = '<span class="tp-badge overdue">Overdue</span>';
-      else if (next && tpDaysDiff(next.due_date) <= 3) statusBadge = '<span class="tp-badge today">Due Soon</span>';
-      else statusBadge = '<span class="tp-badge on-track">On Track</span>';
-
-      return `<div class="tp-row" onclick="tpToggle('${p.id}')" style="cursor:pointer">
-        <div class="tp-patient">${escHtml(p.patient_name)}</div>
-        <div><div class="tp-touchpoint">${next ? escHtml(next.touchpoint_name) : 'All done'}</div><div class="tp-purpose">${next ? tpFmtDate(next.due_date) : ''}</div></div>
-        <div class="tp-due">${tpFmtDate(p.last_visit_date)}</div>
-        <div>${statusBadge}</div>
-      </div>
-      <div class="tp-detail-row" id="tp-detail-${p.id}">
-        <div style="padding:8px 0;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Touchpoint Timeline — Started ${tpFmtDate(p.start_date)} | ${p.visit_count || 0} visits</div>
-        ${pTps.map(tp => {
-          const diff = tpDaysDiff(tp.due_date);
-          let dotCls = 'pending';
-          if (tp.status === 'completed') dotCls = 'completed';
-          else if (diff < 0) dotCls = 'overdue';
-          else if (diff === 0) dotCls = 'today';
-
-          return `<div class="tp-timeline-item ${tp.status === 'completed' ? 'done' : ''}">
-            <div class="tp-dot ${dotCls}"></div>
-            <div style="flex:1;font-weight:500">${escHtml(tp.touchpoint_name)}</div>
-            <div style="color:var(--text-dim);font-size:0.72rem">${tpFmtDate(tp.due_date)}</div>
-            ${tp.status !== 'completed' ? `<button class="tp-btn-done" onclick="event.stopPropagation();tpMarkDone('${tp.id}')">Done</button>` : '<span style="font-size:0.7rem;color:var(--success)">Done</span>'}
-          </div>`;
-        }).join('')}
-      </div>`;
-    }).join('');
-  }
-
-  function tpToggle(id) {
-    const el = document.getElementById('tp-detail-' + id);
-    if (el) el.classList.toggle('open');
-  }
-
-  async function tpMarkDone(tpId) {
-    await fetch(`${SUPABASE_URL}/rest/v1/patient_touchpoints?id=eq.${tpId}`, {
+  async function rtMarkDone(patientId) {
+    const today = new Date().toISOString().split('T')[0];
+    await fetch(`${SUPABASE_URL}/rest/v1/patient_tracker?id=eq.${patientId}`, {
       method: 'PATCH',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status: 'completed', completed_at: new Date().toISOString(), completed_by: 'dashboard' })
+      body: JSON.stringify({ last_touchpoint_date: today })
     });
     loadRetentionTracker();
   }
 
-  async function tpMarkSkip(tpId) {
-    await fetch(`${SUPABASE_URL}/rest/v1/patient_touchpoints?id=eq.${tpId}`, {
+  async function rtAddPatient() {
+    const name = document.getElementById('rt-add-name').value.trim();
+    const type = document.getElementById('rt-add-type').value;
+    const date = document.getElementById('rt-add-date').value;
+    if (!name) { alert('Please enter a patient name.'); return; }
+    const startDate = date || new Date().toISOString().split('T')[0];
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/patient_tracker`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          location_slug: 'troy',
+          patient_name: name,
+          service_type: type,
+          start_date: startDate,
+          status: 'active'
+        })
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        if (err.includes('duplicate') || err.includes('unique')) {
+          alert(name + ' is already being tracked.');
+        } else {
+          alert('Error adding patient: ' + err);
+        }
+        return;
+      }
+      // Reset form and close modal
+      document.getElementById('rt-add-name').value = '';
+      document.getElementById('rt-add-date').value = '';
+      document.getElementById('rt-add-modal').classList.remove('open');
+      loadRetentionTracker();
+    } catch(e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  async function rtMarkChurned(patientId, name) {
+    if (!confirm('Mark ' + name + ' as churned? They will be removed from active tracking.')) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/patient_tracker?id=eq.${patientId}`, {
       method: 'PATCH',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status: 'skipped', completed_at: new Date().toISOString() })
+      body: JSON.stringify({ status: 'churned' })
     });
     loadRetentionTracker();
   }
