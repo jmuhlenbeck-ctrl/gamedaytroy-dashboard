@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Patient Tracker — Gameday Men's Health</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a1a2e;
+      --primary-light: #2a2a4a;
+      --accent: #cc0000;
+      --accent-hover: #a80000;
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --text: #1a1a2e;
+      --text-muted: #6b7a99;
+      --text-dim: #9ca3af;
+      --border: rgba(0,0,0,0.08);
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #cc0000;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --teal: #0d9488;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5;
+    }
+
+    /* NAV BAR */
+    .quick-links-bar {
+      background: var(--primary); padding: 8px 20px; display: flex; gap: 4px;
+      align-items: center; position: sticky; top: 0; z-index: 100;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .quick-link {
+      display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      color: rgba(255,255,255,0.7); text-decoration: none; white-space: nowrap; transition: all 0.15s;
+    }
+    .quick-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .quick-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+
+    /* PIN OVERLAY */
+    .pin-overlay {
+      position: fixed; inset: 0; background: #fff; z-index: 9999;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+    }
+    .pin-overlay.hidden { display: none; }
+    .pin-overlay h2 { font-size: 1.5rem; margin-bottom: 8px; color: var(--primary); }
+    .pin-overlay p { color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; }
+    .pin-input {
+      width: 200px; padding: 14px; font-size: 2rem; text-align: center;
+      border: 2px solid var(--border); border-radius: var(--radius);
+      letter-spacing: 12px; font-family: inherit; outline: none;
+    }
+    .pin-input:focus { border-color: var(--accent); }
+    .pin-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none; }
+
+    /* HEADER */
+    .header {
+      background: var(--primary); padding: 20px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-left h1 { color: #fff; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.5px; }
+    .header-left p { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-top: 2px; }
+    .header-right { display: flex; gap: 10px; align-items: center; }
+    .refresh-btn {
+      background: rgba(255,255,255,0.12); border: none; border-radius: 8px; padding: 8px;
+      cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+    /* MAIN */
+    .main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    /* SECTION TITLE */
+    .section-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--text-muted); margin: 24px 0 12px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* KPI GRID */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+    .kpi-card {
+      background: var(--card); border-radius: var(--radius); padding: 16px 18px;
+      box-shadow: var(--shadow); border-left: 4px solid var(--border); transition: transform 0.15s;
+    }
+    .kpi-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+    .kpi-card.accent-green { border-left-color: var(--success); }
+    .kpi-card.accent-blue { border-left-color: var(--blue); }
+    .kpi-card.accent-red { border-left-color: var(--danger); }
+    .kpi-card.accent-warning { border-left-color: var(--warning); }
+    .kpi-card.accent-teal { border-left-color: var(--teal); }
+    .kpi-card.accent-purple { border-left-color: var(--purple); }
+    .kpi-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .kpi-value { font-size: 1.6rem; font-weight: 800; margin-top: 4px; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 0; margin-bottom: 16px; }
+    .tab {
+      padding: 10px 24px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      border: none; background: var(--card); color: var(--text-muted);
+      border-bottom: 3px solid transparent; transition: all 0.15s;
+    }
+    .tab:first-child { border-radius: var(--radius) 0 0 0; }
+    .tab:last-child { border-radius: 0 var(--radius) 0 0; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ACTION LIST */
+    .action-list {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .action-header {
+      display: grid; grid-template-columns: 2fr 1.5fr 1fr 120px;
+      padding: 12px 18px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted); background: var(--bg); border-bottom: 1px solid var(--border);
+    }
+    .action-row {
+      display: grid; grid-template-columns: 2fr 1.5fr 1fr 120px;
+      padding: 14px 18px; align-items: center; border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .action-row:hover { background: #f8f9fb; }
+    .action-row:last-child { border-bottom: none; }
+    .action-row .patient-name { font-weight: 600; font-size: 0.9rem; }
+    .action-row .touchpoint-name { font-size: 0.85rem; color: var(--text-muted); }
+    .action-row .due-info { font-size: 0.8rem; }
+
+    /* STATUS BADGES */
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .badge-overdue { background: #fef2f2; color: var(--danger); }
+    .badge-due-today { background: #fefce8; color: var(--warning); }
+    .badge-due-soon { background: #eff6ff; color: var(--blue); }
+    .badge-pending { background: #f0fdf4; color: var(--success); }
+    .badge-completed { background: #f0fdf4; color: var(--success); }
+    .badge-trt { background: #eff6ff; color: var(--blue); }
+    .badge-glp1 { background: #f5f3ff; color: var(--purple); }
+
+    /* COMPLETE BUTTON */
+    .btn-complete {
+      padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; font-weight: 600;
+      border: 1px solid var(--border); background: #fff; color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-complete:hover { background: var(--success); color: #fff; border-color: var(--success); }
+    .btn-skip {
+      padding: 6px 10px; border-radius: 8px; font-size: 0.7rem; font-weight: 600;
+      border: none; background: transparent; color: var(--text-dim); cursor: pointer;
+    }
+    .btn-skip:hover { color: var(--danger); }
+
+    /* PATIENT TABLE */
+    .patient-table {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .pt-header {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+      padding: 12px 18px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted); background: var(--bg); border-bottom: 1px solid var(--border);
+    }
+    .pt-row {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 100px;
+      padding: 14px 18px; align-items: center; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .pt-row:hover { background: #f8f9fb; }
+    .pt-row .name { font-weight: 600; font-size: 0.9rem; }
+    .pt-row .detail { font-size: 0.8rem; color: var(--text-muted); }
+    .pt-row .next-due { font-size: 0.8rem; }
+
+    /* EXPANDED PATIENT TOUCHPOINTS */
+    .pt-expanded {
+      display: none; padding: 0 18px 14px; background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+    }
+    .pt-expanded.open { display: block; }
+    .tp-timeline { display: flex; flex-direction: column; gap: 6px; padding: 10px 0; }
+    .tp-item {
+      display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+      border-radius: 8px; font-size: 0.8rem; background: #fff;
+    }
+    .tp-item.completed { opacity: 0.5; }
+    .tp-item .tp-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .tp-dot.pending { background: var(--text-dim); }
+    .tp-dot.completed { background: var(--success); }
+    .tp-dot.overdue { background: var(--danger); }
+    .tp-dot.due-today { background: var(--warning); }
+    .tp-item .tp-name { font-weight: 600; flex: 1; }
+    .tp-item .tp-date { color: var(--text-muted); font-size: 0.75rem; }
+    .tp-item .tp-actions { display: flex; gap: 4px; }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--text-muted);
+    }
+    .empty-state svg { margin-bottom: 16px; opacity: 0.3; }
+    .empty-state h3 { font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+    .empty-state p { font-size: 0.85rem; }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .action-header, .action-row { grid-template-columns: 1fr 1fr 80px; }
+      .action-row .touchpoint-name { display: none; }
+      .pt-header, .pt-row { grid-template-columns: 2fr 1fr 1fr 80px; }
+      .pt-header > :nth-child(3), .pt-row > :nth-child(3) { display: none; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <!-- PIN OVERLAY -->
+  <div class="pin-overlay" id="pinOverlay">
+    <h2>Patient Tracker</h2>
+    <p>Enter PIN to access</p>
+    <input type="password" class="pin-input" id="pinInput" maxlength="4" inputmode="numeric" autofocus>
+    <div class="pin-error" id="pinError">Incorrect PIN</div>
+  </div>
+
+  <!-- NAV BAR -->
+  <nav class="quick-links-bar">
+    <a href="index.html" class="quick-link">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 4 4-7 7m-4-4l-2 2m0 0l4 4"/></svg>
+      Dashboard
+    </a>
+    <a href="patients.html" class="quick-link active">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="5" r="3"/><path d="M2 15c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+      Patient Tracker
+    </a>
+  </nav>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <h1>Patient Touchpoint Tracker</h1>
+      <p>Troy, MI</p>
+    </div>
+    <div class="header-right">
+      <span id="headerDate" style="color:rgba(255,255,255,0.8);font-size:0.85rem;font-weight:500"></span>
+      <button class="refresh-btn" onclick="loadAll()" title="Refresh">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v5h5M17 14v-5h-5"/><path d="M3.5 13A7 7 0 0114.3 4.5L17 9M14.5 5A7 7 0 003.7 13.5L1 9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- KPIs -->
+    <div class="section-title">Overview</div>
+    <div class="kpi-grid">
+      <div class="kpi-card accent-blue">
+        <div class="kpi-label">Active TRT</div>
+        <div class="kpi-value" id="kpiTrt">-</div>
+      </div>
+      <div class="kpi-card accent-purple">
+        <div class="kpi-label">Active GLP-1</div>
+        <div class="kpi-value" id="kpiGlp1">-</div>
+      </div>
+      <div class="kpi-card accent-warning">
+        <div class="kpi-label">Due This Week</div>
+        <div class="kpi-value" id="kpiDueWeek">-</div>
+      </div>
+      <div class="kpi-card accent-red">
+        <div class="kpi-label">Overdue</div>
+        <div class="kpi-value" id="kpiOverdue">-</div>
+      </div>
+    </div>
+
+    <!-- DUE NOW -->
+    <div class="section-title">Action Items</div>
+    <div class="tabs">
+      <button class="tab active" data-tab="due">Due / Overdue</button>
+      <button class="tab" data-tab="trt">TRT Patients</button>
+      <button class="tab" data-tab="glp1">GLP-1 Patients</button>
+    </div>
+
+    <!-- TAB: DUE -->
+    <div class="tab-content active" id="tab-due">
+      <div class="action-list" id="actionList">
+        <div class="action-header">
+          <span>Patient</span>
+          <span>Touchpoint</span>
+          <span>Due</span>
+          <span>Actions</span>
+        </div>
+        <div id="actionRows"></div>
+      </div>
+    </div>
+
+    <!-- TAB: TRT -->
+    <div class="tab-content" id="tab-trt">
+      <div class="patient-table">
+        <div class="pt-header">
+          <span>Patient</span>
+          <span>Started</span>
+          <span>Last Visit</span>
+          <span>Next Touchpoint</span>
+          <span>Status</span>
+        </div>
+        <div id="trtRows"></div>
+      </div>
+    </div>
+
+    <!-- TAB: GLP-1 -->
+    <div class="tab-content" id="tab-glp1">
+      <div class="patient-table">
+        <div class="pt-header">
+          <span>Patient</span>
+          <span>Started</span>
+          <span>Last Visit</span>
+          <span>Next Touchpoint</span>
+          <span>Status</span>
+        </div>
+        <div id="glp1Rows"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== CONFIG =====
+    const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMyODczNjMsImV4cCI6MjA1ODg2MzM2M30.LbdIw_sJAgJFInOdWXWphw_dIkzg8YE';
+    const PIN = '1234';
+    const LOCATION = 'troy';
+
+    // ===== PIN AUTH =====
+    const pinOverlay = document.getElementById('pinOverlay');
+    const pinInput = document.getElementById('pinInput');
+    const pinError = document.getElementById('pinError');
+
+    if (sessionStorage.getItem('gd_pin_ok') === '1') {
+      pinOverlay.classList.add('hidden');
+      loadAll();
+    }
+    pinInput.addEventListener('input', () => {
+      if (pinInput.value.length === 4) {
+        if (pinInput.value === PIN) {
+          sessionStorage.setItem('gd_pin_ok', '1');
+          pinOverlay.classList.add('hidden');
+          loadAll();
+        } else {
+          pinError.style.display = 'block';
+          pinInput.value = '';
+          setTimeout(() => pinError.style.display = 'none', 2000);
+        }
+      }
+    });
+
+    // ===== DATE HELPERS =====
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    document.getElementById('headerDate').textContent = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    function daysDiff(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      return Math.floor((d - today) / (1000 * 60 * 60 * 24));
+    }
+    function fmtDate(dateStr) {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    function endOfWeek() {
+      const d = new Date(today);
+      d.setDate(d.getDate() + (7 - d.getDay()));
+      return d;
+    }
+
+    // ===== SUPABASE HELPERS =====
+    async function sbGet(table, query = '') {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      return r.json();
+    }
+    async function sbPatch(table, id, data) {
+      await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(data)
+      });
+    }
+
+    // ===== TABS =====
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ===== STATE =====
+    let patients = [];
+    let touchpoints = [];
+
+    // ===== LOAD ALL =====
+    async function loadAll() {
+      try {
+        [patients, touchpoints] = await Promise.all([
+          sbGet('patient_tracker', `location_slug=eq.${LOCATION}&status=eq.active&order=patient_name`),
+          sbGet('patient_touchpoints', `order=due_date.asc`)
+        ]);
+
+        // Filter touchpoints to only our patients
+        const patientIds = new Set(patients.map(p => p.id));
+        touchpoints = touchpoints.filter(tp => patientIds.has(tp.patient_id));
+
+        renderKPIs();
+        renderActionItems();
+        renderPatientTab('trt', 'trtRows');
+        renderPatientTab('glp1', 'glp1Rows');
+      } catch (e) {
+        console.error('Load error:', e);
+      }
+    }
+
+    // ===== RENDER KPIs =====
+    function renderKPIs() {
+      const trtCount = patients.filter(p => p.service_type === 'trt').length;
+      const glp1Count = patients.filter(p => p.service_type === 'glp1').length;
+
+      const pendingTps = touchpoints.filter(tp => tp.status === 'pending' || tp.status === 'overdue');
+      const eow = endOfWeek();
+      const dueThisWeek = pendingTps.filter(tp => {
+        const d = new Date(tp.due_date + 'T00:00:00');
+        return d <= eow;
+      }).length;
+      const overdue = pendingTps.filter(tp => daysDiff(tp.due_date) < 0).length;
+
+      document.getElementById('kpiTrt').textContent = trtCount;
+      document.getElementById('kpiGlp1').textContent = glp1Count;
+      document.getElementById('kpiDueWeek').textContent = dueThisWeek;
+      document.getElementById('kpiOverdue').textContent = overdue;
+    }
+
+    // ===== RENDER ACTION ITEMS =====
+    function renderActionItems() {
+      const container = document.getElementById('actionRows');
+      const pending = touchpoints
+        .filter(tp => tp.status === 'pending' || tp.status === 'overdue')
+        .filter(tp => daysDiff(tp.due_date) <= 7) // Due within 7 days or overdue
+        .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+
+      if (pending.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h3>All caught up!</h3><p>No touchpoints due this week.</p></div>';
+        return;
+      }
+
+      container.innerHTML = pending.map(tp => {
+        const patient = patients.find(p => p.id === tp.patient_id);
+        if (!patient) return '';
+        const diff = daysDiff(tp.due_date);
+        let badge, dueText;
+        if (diff < 0) {
+          badge = '<span class="badge badge-overdue">Overdue</span>';
+          dueText = Math.abs(diff) + 'd ago';
+        } else if (diff === 0) {
+          badge = '<span class="badge badge-due-today">Today</span>';
+          dueText = 'Today';
+        } else {
+          badge = '<span class="badge badge-due-soon">' + diff + 'd</span>';
+          dueText = fmtDate(tp.due_date);
+        }
+        const typeBadge = patient.service_type === 'trt'
+          ? '<span class="badge badge-trt">TRT</span>'
+          : '<span class="badge badge-glp1">GLP-1</span>';
+
+        return `<div class="action-row">
+          <div>
+            <div class="patient-name">${patient.patient_name}</div>
+            <div style="margin-top:2px">${typeBadge}</div>
+          </div>
+          <div class="touchpoint-name">${tp.touchpoint_name}<br><span style="font-size:0.75rem;color:var(--text-dim)">${tp.purpose || ''}</span></div>
+          <div class="due-info">${dueText} ${badge}</div>
+          <div>
+            <button class="btn-complete" onclick="markComplete('${tp.id}')">Done</button>
+            <button class="btn-skip" onclick="markSkipped('${tp.id}')">Skip</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ===== RENDER PATIENT TABS =====
+    function renderPatientTab(serviceType, containerId) {
+      const container = document.getElementById(containerId);
+      const filtered = patients.filter(p => p.service_type === serviceType);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state"><h3>No ${serviceType === 'trt' ? 'TRT' : 'GLP-1'} patients</h3><p>Patients will appear here automatically from Lobbie appointments.</p></div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(p => {
+        const pTps = touchpoints.filter(tp => tp.patient_id === p.id);
+        const nextPending = pTps.find(tp => tp.status === 'pending' || tp.status === 'overdue');
+        const nextDue = nextPending ? fmtDate(nextPending.due_date) : 'All done';
+        const hasOverdue = pTps.some(tp => (tp.status === 'pending' || tp.status === 'overdue') && daysDiff(tp.due_date) < 0);
+
+        const statusBadge = hasOverdue
+          ? '<span class="badge badge-overdue">Overdue</span>'
+          : (nextPending && daysDiff(nextPending.due_date) <= 3
+            ? '<span class="badge badge-due-today">Due Soon</span>'
+            : '<span class="badge badge-pending">On Track</span>');
+
+        return `<div class="pt-row" onclick="toggleExpand('${p.id}')">
+          <div class="name">${p.patient_name}</div>
+          <div class="detail">${fmtDate(p.start_date)}</div>
+          <div class="detail">${fmtDate(p.last_visit_date)}</div>
+          <div class="next-due">${nextPending ? nextPending.touchpoint_name : 'All done'}<br><span style="font-size:0.75rem;color:var(--text-dim)">${nextDue}</span></div>
+          <div>${statusBadge}</div>
+        </div>
+        <div class="pt-expanded" id="expand-${p.id}">
+          <div class="tp-timeline">
+            ${pTps.map(tp => {
+              const diff = daysDiff(tp.due_date);
+              let dotClass = 'pending';
+              if (tp.status === 'completed') dotClass = 'completed';
+              else if (diff < 0) dotClass = 'overdue';
+              else if (diff === 0) dotClass = 'due-today';
+
+              return `<div class="tp-item ${tp.status === 'completed' ? 'completed' : ''}">
+                <div class="tp-dot ${dotClass}"></div>
+                <div class="tp-name">${tp.touchpoint_name}</div>
+                <div class="tp-date">${fmtDate(tp.due_date)}${tp.status === 'completed' ? ' (done)' : ''}</div>
+                <div class="tp-actions">
+                  ${tp.status === 'pending' || tp.status === 'overdue'
+                    ? `<button class="btn-complete" onclick="event.stopPropagation();markComplete('${tp.id}')">Done</button>`
+                    : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ===== EXPAND/COLLAPSE =====
+    function toggleExpand(patientId) {
+      const el = document.getElementById('expand-' + patientId);
+      if (el) el.classList.toggle('open');
+    }
+
+    // ===== MARK COMPLETE =====
+    async function markComplete(tpId) {
+      await sbPatch('patient_touchpoints', tpId, {
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        completed_by: 'dashboard'
+      });
+      loadAll();
+    }
+
+    // ===== MARK SKIPPED =====
+    async function markSkipped(tpId) {
+      await sbPatch('patient_touchpoints', tpId, {
+        status: 'skipped',
+        completed_at: new Date().toISOString()
+      });
+      loadAll();
+    }
+  </script>
+</body>
+</html>

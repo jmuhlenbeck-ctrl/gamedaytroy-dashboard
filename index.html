@@ -343,6 +343,140 @@
       .kpi-value { font-size: 1.4rem; }
       .service-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* PATIENT TOUCHPOINT / RETENTION SECTION */
+    .tp-tabs { display: flex; gap: 0; margin-bottom: 12px; }
+    .tp-tab {
+      padding: 8px 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      border: none; background: var(--card); color: var(--text-muted);
+      border-bottom: 3px solid transparent; transition: all 0.15s;
+    }
+    .tp-tab:first-child { border-radius: var(--radius) 0 0 0; }
+    .tp-tab:last-child { border-radius: 0 var(--radius) 0 0; }
+    .tp-tab:hover { color: var(--text); }
+    .tp-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tp-tab-content { display: none; }
+    .tp-tab-content.active { display: block; }
+    .tp-list { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .tp-list-header {
+      display: grid; grid-template-columns: 2fr 1.5fr 1fr 100px;
+      padding: 10px 16px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text-muted); background: var(--bg); border-bottom: 1px solid var(--border);
+    }
+    .tp-row {
+      display: grid; grid-template-columns: 2fr 1.5fr 1fr 100px;
+      padding: 12px 16px; align-items: center; border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .tp-row:last-child { border-bottom: none; }
+    .tp-row:hover { background: #f8f9fb; }
+    .tp-row .tp-patient { font-weight: 600; font-size: 0.85rem; }
+    .tp-row .tp-type-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-left: 6px;
+    }
+    .tp-type-badge.trt { background: #dbeafe; color: #1e40af; }
+    .tp-type-badge.glp1 { background: #f3e8ff; color: #6b21a8; }
+    .tp-row .tp-touchpoint { font-size: 0.8rem; color: var(--text-muted); }
+    .tp-row .tp-purpose { font-size: 0.7rem; color: var(--text-dim); }
+    .tp-row .tp-due { font-size: 0.8rem; }
+    .tp-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    }
+    .tp-badge.overdue { background: #fef2f2; color: var(--danger); }
+    .tp-badge.today { background: #fefce8; color: var(--warning); }
+    .tp-badge.soon { background: #eff6ff; color: var(--blue); }
+    .tp-badge.on-track { background: #f0fdf4; color: var(--success); }
+    .tp-btn-done {
+      padding: 5px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: 600;
+      border: 1px solid var(--border); background: #fff; color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .tp-btn-done:hover { background: var(--success); color: #fff; border-color: var(--success); }
+    .tp-btn-skip {
+      padding: 5px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 600;
+      border: none; background: transparent; color: var(--text-dim); cursor: pointer;
+    }
+    .tp-btn-skip:hover { color: var(--danger); }
+    .tp-empty {
+      text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 0.85rem;
+      background: var(--card); border-radius: var(--radius);
+    }
+    /* Patient detail rows (expandable) */
+    .tp-detail-row {
+      display: none; padding: 0 16px 12px; background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+    }
+    .tp-detail-row.open { display: block; }
+    .tp-timeline-item {
+      display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+      border-radius: 6px; font-size: 0.78rem; margin: 3px 0; background: #fff;
+    }
+    .tp-timeline-item.done { opacity: 0.45; }
+    .tp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .tp-dot.pending { background: var(--text-dim); }
+    .tp-dot.completed { background: var(--success); }
+    .tp-dot.overdue { background: var(--danger); }
+    .tp-dot.today { background: var(--warning); }
+    @media (max-width: 768px) {
+      .tp-list-header, .tp-row { grid-template-columns: 1.5fr 1fr 80px; }
+      .tp-row .tp-touchpoint { display: none; }
+    }
+
+    /* SEO SECTION */
+    .seo-review-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 14px 18px; box-shadow: var(--shadow);
+      border-left: 4px solid var(--teal);
+    }
+    .seo-review-card.negative { border-left-color: var(--danger); }
+    .seo-review-card.neutral { border-left-color: var(--warning); }
+    .seo-review-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+    }
+    .seo-review-name { font-weight: 700; font-size: 0.9rem; }
+    .seo-review-stars { font-size: 0.85rem; }
+    .seo-review-comment {
+      font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .seo-review-reply {
+      margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border);
+      font-size: 0.75rem; color: var(--teal);
+    }
+    .seo-review-reply .label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .seo-post-card {
+      background: var(--card); border-radius: var(--radius);
+      padding: 14px 18px; box-shadow: var(--shadow);
+      border-left: 4px solid var(--purple);
+    }
+    .seo-post-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 4px; }
+    .seo-post-content {
+      font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .seo-post-meta {
+      display: flex; gap: 12px; margin-top: 8px; font-size: 0.7rem; color: var(--text-dim);
+    }
+    .seo-status-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .seo-status-badge.draft { background: #fef3c7; color: #92400e; }
+    .seo-status-badge.published { background: #d1fae5; color: #065f46; }
+    .seo-status-badge.pending { background: #fce7f3; color: #9d174d; }
+    .seo-status-badge.drafted { background: #dbeafe; color: #1e40af; }
+    .seo-action-item {
+      background: var(--card); border-radius: 8px; padding: 10px 14px;
+      box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center;
+    }
+    .seo-action-desc { font-size: 0.8rem; font-weight: 500; }
+    .seo-action-time { font-size: 0.7rem; color: var(--text-dim); }
+    .seo-action-type {
+      font-size: 0.65rem; font-weight: 700; color: var(--teal);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
   </style>
 </head>
 <body>
@@ -368,6 +502,14 @@
   <a href="https://n8n.alphaclinicai.com/form/campaign-manager" class="quick-link" target="_blank">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
     Campaigns
+  </a>
+  <a href="#seo-section" class="quick-link" onclick="document.getElementById('seo-section').scrollIntoView({behavior:'smooth'});return false;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    SEO
+  </a>
+  <a href="#retention-section" class="quick-link" onclick="document.getElementById('retention-section').scrollIntoView({behavior:'smooth'});return false;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="5" r="3"/><path d="M2 15c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11l2 2 4-4"/></svg>
+    Retention
   </a>
 </nav>
 
@@ -501,6 +643,147 @@
     <!-- PATIENT ACTIVITY -->
     <div class="section-title">Patient Activity</div>
     <div class="patient-section" id="patient-section"></div>
+
+    <!-- PATIENT TOUCHPOINT / RETENTION TRACKER -->
+    <div id="retention-section" style="margin-top:32px;">
+      <div class="section-title">Patient Retention Tracker</div>
+
+      <!-- Retention KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card accent-blue">
+          <div class="kpi-label">Active TRT</div>
+          <div class="kpi-value blue" id="tp-kpi-trt">-</div>
+        </div>
+        <div class="kpi-card accent-purple">
+          <div class="kpi-label">Active GLP-1</div>
+          <div class="kpi-value purple" id="tp-kpi-glp1">-</div>
+        </div>
+        <div class="kpi-card accent-warning">
+          <div class="kpi-label">Due This Week</div>
+          <div class="kpi-value" style="color:var(--warning)" id="tp-kpi-due">-</div>
+        </div>
+        <div class="kpi-card accent-red">
+          <div class="kpi-label">Overdue</div>
+          <div class="kpi-value" style="color:var(--danger)" id="tp-kpi-overdue">-</div>
+        </div>
+      </div>
+
+      <!-- Tabs: Action Items | TRT | GLP-1 -->
+      <div class="tp-tabs" style="margin-top:16px;">
+        <button class="tp-tab active" data-tptab="action">Action Items</button>
+        <button class="tp-tab" data-tptab="trt">TRT Patients</button>
+        <button class="tp-tab" data-tptab="glp1">GLP-1 Patients</button>
+      </div>
+
+      <!-- Action Items Tab -->
+      <div class="tp-tab-content active" id="tptab-action">
+        <div class="tp-list">
+          <div class="tp-list-header">
+            <span>Patient</span>
+            <span>Touchpoint</span>
+            <span>Due</span>
+            <span>Actions</span>
+          </div>
+          <div id="tp-action-rows">
+            <div class="tp-empty">Loading touchpoint data...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRT Tab -->
+      <div class="tp-tab-content" id="tptab-trt">
+        <div class="tp-list">
+          <div class="tp-list-header">
+            <span>Patient</span>
+            <span>Next Touchpoint</span>
+            <span>Last Visit</span>
+            <span>Status</span>
+          </div>
+          <div id="tp-trt-rows">
+            <div class="tp-empty">No TRT patients tracked yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GLP-1 Tab -->
+      <div class="tp-tab-content" id="tptab-glp1">
+        <div class="tp-list">
+          <div class="tp-list-header">
+            <span>Patient</span>
+            <span>Next Touchpoint</span>
+            <span>Last Visit</span>
+            <span>Status</span>
+          </div>
+          <div id="tp-glp1-rows">
+            <div class="tp-empty">No GLP-1 patients tracked yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEO PERFORMANCE -->
+    <div id="seo-section" style="margin-top:32px;">
+      <div class="section-title">SEO Performance</div>
+
+      <!-- SEO KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card accent-teal">
+          <div class="kpi-label">Avg Review Rating</div>
+          <div class="kpi-value teal" id="seo-avg-rating">--</div>
+          <div class="kpi-sub" id="seo-review-count">0 reviews</div>
+        </div>
+        <div class="kpi-card accent-blue">
+          <div class="kpi-label">Pending Replies</div>
+          <div class="kpi-value blue" id="seo-pending-replies">0</div>
+          <div class="kpi-sub">need response</div>
+        </div>
+        <div class="kpi-card accent-purple">
+          <div class="kpi-label">Draft Posts</div>
+          <div class="kpi-value purple" id="seo-draft-posts">0</div>
+          <div class="kpi-sub" id="seo-published-posts">0 published</div>
+        </div>
+        <div class="kpi-card accent-green">
+          <div class="kpi-label">Top Keyword</div>
+          <div class="kpi-value green" id="seo-top-keyword" style="font-size:1.1rem;">--</div>
+          <div class="kpi-sub" id="seo-top-score">trend score: --</div>
+        </div>
+      </div>
+
+      <!-- RECENT REVIEWS -->
+      <div class="section-title" style="margin-top:20px;">Recent Reviews</div>
+      <div id="seo-reviews-list" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">Loading SEO data...</div>
+      </div>
+
+      <!-- KEYWORD TRENDS -->
+      <div class="section-title" style="margin-top:20px;">Keyword Trends</div>
+      <div class="trend-card">
+        <table class="trend-table">
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Trend Score</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="seo-keyword-body">
+            <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No keyword data yet</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- GBP DRAFT POSTS -->
+      <div class="section-title" style="margin-top:20px;">Recent GBP Posts</div>
+      <div id="seo-posts-list" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No posts yet</div>
+      </div>
+
+      <!-- SEO ACTION LOG -->
+      <div class="section-title" style="margin-top:20px;">SEO Agent Activity</div>
+      <div id="seo-action-log" style="display:flex;flex-direction:column;gap:6px;">
+        <div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No activity yet</div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -1065,6 +1348,345 @@
     if (e.key === 'Enter') saveGoal();
     if (e.key === 'Escape') cancelGoal();
   });
+
+  // ---- SEO DASHBOARD SECTION ----
+
+  async function loadSEOData() {
+    try {
+      const [reviews, posts, keywords, actions] = await Promise.all([
+        supaFetch('seo_reviews', `location_slug=eq.${LOCATION}&order=created_at.desc&limit=10`),
+        supaFetch('seo_gbp_posts', `location_slug=eq.${LOCATION}&order=created_at.desc&limit=5`),
+        supaFetch('seo_keyword_rankings', `location_slug=eq.${LOCATION}&order=rank_date.desc&limit=20`),
+        supaFetch('seo_action_log', `location_slug=eq.${LOCATION}&order=created_at.desc&limit=8`),
+      ]);
+
+      renderSEOKPIs(reviews, posts, keywords);
+      renderSEOReviews(reviews);
+      renderSEOKeywords(keywords);
+      renderSEOPosts(posts);
+      renderSEOActions(actions);
+    } catch (e) {
+      console.warn('SEO data load error:', e);
+    }
+  }
+
+  function renderSEOKPIs(reviews, posts, keywords) {
+    // Average rating
+    if (reviews && reviews.length > 0) {
+      const rated = reviews.filter(r => r.star_rating);
+      const avg = rated.length > 0 ? (rated.reduce((s, r) => s + r.star_rating, 0) / rated.length).toFixed(1) : '--';
+      document.getElementById('seo-avg-rating').textContent = avg + (avg !== '--' ? ' / 5' : '');
+      document.getElementById('seo-review-count').textContent = reviews.length + ' reviews';
+    }
+
+    // Pending replies
+    const pending = (reviews || []).filter(r => r.reply_status === 'pending');
+    document.getElementById('seo-pending-replies').textContent = pending.length;
+
+    // Posts
+    const drafts = (posts || []).filter(p => p.status === 'draft');
+    const published = (posts || []).filter(p => p.status === 'published');
+    document.getElementById('seo-draft-posts').textContent = drafts.length;
+    document.getElementById('seo-published-posts').textContent = published.length + ' published';
+
+    // Top keyword
+    if (keywords && keywords.length > 0) {
+      // Deduplicate by keyword, keep highest trend score
+      const best = {};
+      for (const k of keywords) {
+        if (!best[k.keyword] || (k.trend_score || 0) > (best[k.keyword].trend_score || 0)) {
+          best[k.keyword] = k;
+        }
+      }
+      const sorted = Object.values(best).sort((a, b) => (b.trend_score || 0) - (a.trend_score || 0));
+      if (sorted.length > 0 && sorted[0].trend_score > 0) {
+        document.getElementById('seo-top-keyword').textContent = sorted[0].keyword;
+        document.getElementById('seo-top-score').textContent = 'trend score: ' + sorted[0].trend_score;
+      }
+    }
+  }
+
+  function starsHtml(rating) {
+    const full = Math.floor(rating || 0);
+    let s = '';
+    for (let i = 0; i < 5; i++) s += i < full ? '<span style="color:#f59e0b;">&#9733;</span>' : '<span style="color:#d1d5db;">&#9733;</span>';
+    return s;
+  }
+
+  function renderSEOReviews(reviews) {
+    const container = document.getElementById('seo-reviews-list');
+    if (!reviews || reviews.length === 0) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No reviews synced yet — waiting for GBP API access</div>';
+      return;
+    }
+
+    container.innerHTML = reviews.slice(0, 5).map(r => {
+      const sentiment = r.star_rating >= 4 ? '' : r.star_rating === 3 ? ' neutral' : ' negative';
+      const replyHtml = r.reply_draft
+        ? `<div class="seo-review-reply"><span class="label">AI Draft Reply: </span>${escHtml(r.reply_draft).substring(0, 120)}...</div>`
+        : r.reply_status === 'pending'
+          ? '<div class="seo-review-reply" style="color:var(--warning);"><span class="label">Awaiting Reply</span></div>'
+          : '';
+      return `<div class="seo-review-card${sentiment}">
+        <div class="seo-review-header">
+          <span class="seo-review-name">${escHtml(r.reviewer_name || 'Anonymous')}</span>
+          <span class="seo-review-stars">${starsHtml(r.star_rating)}</span>
+        </div>
+        <div class="seo-review-comment">${escHtml(r.comment || 'No comment')}</div>
+        ${replyHtml}
+      </div>`;
+    }).join('');
+  }
+
+  function renderSEOKeywords(keywords) {
+    const tbody = document.getElementById('seo-keyword-body');
+    if (!keywords || keywords.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No keyword data yet — runs weekly Monday 8am</td></tr>';
+      return;
+    }
+
+    // Deduplicate: show latest date per keyword
+    const latest = {};
+    for (const k of keywords) {
+      if (!latest[k.keyword] || k.rank_date > latest[k.keyword].rank_date) {
+        latest[k.keyword] = k;
+      }
+    }
+    const sorted = Object.values(latest).sort((a, b) => (b.trend_score || 0) - (a.trend_score || 0));
+
+    tbody.innerHTML = sorted.map(k => {
+      const score = k.trend_score || 0;
+      const barColor = score >= 70 ? 'var(--success)' : score >= 40 ? 'var(--warning)' : 'var(--text-dim)';
+      return `<tr>
+        <td style="font-weight:600;">${escHtml(k.keyword)}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:60px;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
+              <div style="width:${score}%;height:100%;background:${barColor};border-radius:3px;"></div>
+            </div>
+            <span style="font-weight:700;font-size:0.85rem;">${score}</span>
+          </div>
+        </td>
+        <td style="font-size:0.75rem;color:var(--text-dim);">${formatDate(k.rank_date)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderSEOPosts(posts) {
+    const container = document.getElementById('seo-posts-list');
+    if (!posts || posts.length === 0) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No posts yet — runs weekly Tuesday 9am</div>';
+      return;
+    }
+
+    container.innerHTML = posts.map(p => {
+      const statusClass = (p.status || 'draft').toLowerCase();
+      return `<div class="seo-post-card">
+        <div class="seo-post-title">${escHtml(p.title || 'GBP Post')}</div>
+        <div class="seo-post-content">${escHtml(p.content || '')}</div>
+        <div class="seo-post-meta">
+          <span class="seo-status-badge ${statusClass}">${p.status || 'draft'}</span>
+          <span>${(p.content || '').length} chars</span>
+          <span>${formatDate(p.created_at ? p.created_at.split('T')[0] : '')}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderSEOActions(actions) {
+    const container = document.getElementById('seo-action-log');
+    if (!actions || actions.length === 0) {
+      container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No SEO activity yet</div>';
+      return;
+    }
+
+    container.innerHTML = actions.map(a => {
+      const time = a.created_at ? new Date(a.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      const statusColor = a.status === 'error' ? 'var(--danger)' : 'var(--teal)';
+      return `<div class="seo-action-item">
+        <div>
+          <div class="seo-action-type" style="color:${statusColor};">${escHtml(a.action_type || '')}</div>
+          <div class="seo-action-desc">${escHtml(a.description || '')}</div>
+        </div>
+        <div class="seo-action-time">${time}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---- PATIENT TOUCHPOINT / RETENTION TRACKER ----
+
+  // Tab switching
+  document.querySelectorAll('.tp-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tp-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tp-tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('tptab-' + tab.dataset.tptab).classList.add('active');
+    });
+  });
+
+  let tpPatients = [];
+  let tpTouchpoints = [];
+
+  function tpDaysDiff(dateStr) {
+    const now = new Date(); now.setHours(0,0,0,0);
+    const d = new Date(dateStr + 'T00:00:00');
+    return Math.floor((d - now) / (1000*60*60*24));
+  }
+  function tpFmtDate(dateStr) {
+    if (!dateStr) return '-';
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  async function loadRetentionTracker() {
+    try {
+      const [patients, touchpoints] = await Promise.all([
+        supaFetch('patient_tracker', 'location_slug=eq.troy&status=eq.active&order=patient_name'),
+        supaFetch('patient_touchpoints', 'status=in.(pending,overdue)&order=due_date.asc')
+      ]);
+      tpPatients = patients || [];
+      tpTouchpoints = touchpoints || [];
+
+      // Filter touchpoints to our patients
+      const pIds = new Set(tpPatients.map(p => p.id));
+      tpTouchpoints = tpTouchpoints.filter(tp => pIds.has(tp.patient_id));
+
+      renderRetentionKPIs();
+      renderActionItems();
+      renderPatientList('trt', 'tp-trt-rows');
+      renderPatientList('glp1', 'tp-glp1-rows');
+    } catch(e) {
+      console.warn('Retention tracker load error:', e);
+    }
+  }
+
+  function renderRetentionKPIs() {
+    const trt = tpPatients.filter(p => p.service_type === 'trt').length;
+    const glp1 = tpPatients.filter(p => p.service_type === 'glp1').length;
+    const now = new Date(); now.setHours(0,0,0,0);
+    const eow = new Date(now); eow.setDate(eow.getDate() + (7 - eow.getDay()));
+
+    const dueWeek = tpTouchpoints.filter(tp => {
+      const d = new Date(tp.due_date + 'T00:00:00');
+      return d <= eow;
+    }).length;
+    const overdue = tpTouchpoints.filter(tp => tpDaysDiff(tp.due_date) < 0).length;
+
+    document.getElementById('tp-kpi-trt').textContent = trt;
+    document.getElementById('tp-kpi-glp1').textContent = glp1;
+    document.getElementById('tp-kpi-due').textContent = dueWeek;
+    document.getElementById('tp-kpi-overdue').textContent = overdue;
+  }
+
+  function renderActionItems() {
+    const container = document.getElementById('tp-action-rows');
+    // Show overdue + due within 7 days
+    const items = tpTouchpoints
+      .filter(tp => tpDaysDiff(tp.due_date) <= 7)
+      .sort((a,b) => new Date(a.due_date) - new Date(b.due_date));
+
+    if (items.length === 0) {
+      container.innerHTML = '<div class="tp-empty">All caught up! No touchpoints due this week.</div>';
+      return;
+    }
+
+    container.innerHTML = items.map(tp => {
+      const p = tpPatients.find(pt => pt.id === tp.patient_id);
+      if (!p) return '';
+      const diff = tpDaysDiff(tp.due_date);
+      let badge, dueText;
+      if (diff < 0) { badge = '<span class="tp-badge overdue">Overdue</span>'; dueText = Math.abs(diff) + 'd ago'; }
+      else if (diff === 0) { badge = '<span class="tp-badge today">Today</span>'; dueText = 'Today'; }
+      else { badge = '<span class="tp-badge soon">' + diff + 'd</span>'; dueText = tpFmtDate(tp.due_date); }
+      const typeBadge = `<span class="tp-type-badge ${p.service_type}">${p.service_type === 'trt' ? 'TRT' : 'GLP-1'}</span>`;
+
+      return `<div class="tp-row">
+        <div><span class="tp-patient">${escHtml(p.patient_name)}</span>${typeBadge}</div>
+        <div><div class="tp-touchpoint">${escHtml(tp.touchpoint_name)}</div><div class="tp-purpose">${escHtml(tp.purpose || '')}</div></div>
+        <div class="tp-due">${dueText} ${badge}</div>
+        <div>
+          <button class="tp-btn-done" onclick="tpMarkDone('${tp.id}')">Done</button>
+          <button class="tp-btn-skip" onclick="tpMarkSkip('${tp.id}')">Skip</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderPatientList(serviceType, containerId) {
+    const container = document.getElementById(containerId);
+    const filtered = tpPatients.filter(p => p.service_type === serviceType);
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="tp-empty">No ${serviceType === 'trt' ? 'TRT' : 'GLP-1'} patients tracked yet. Patients auto-enroll from Lobbie appointments.</div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(p => {
+      const pTps = tpTouchpoints.filter(tp => tp.patient_id === p.id);
+      const next = pTps[0]; // Already sorted by due_date
+      const hasOverdue = pTps.some(tp => tpDaysDiff(tp.due_date) < 0);
+
+      let statusBadge;
+      if (hasOverdue) statusBadge = '<span class="tp-badge overdue">Overdue</span>';
+      else if (next && tpDaysDiff(next.due_date) <= 3) statusBadge = '<span class="tp-badge today">Due Soon</span>';
+      else statusBadge = '<span class="tp-badge on-track">On Track</span>';
+
+      return `<div class="tp-row" onclick="tpToggle('${p.id}')" style="cursor:pointer">
+        <div class="tp-patient">${escHtml(p.patient_name)}</div>
+        <div><div class="tp-touchpoint">${next ? escHtml(next.touchpoint_name) : 'All done'}</div><div class="tp-purpose">${next ? tpFmtDate(next.due_date) : ''}</div></div>
+        <div class="tp-due">${tpFmtDate(p.last_visit_date)}</div>
+        <div>${statusBadge}</div>
+      </div>
+      <div class="tp-detail-row" id="tp-detail-${p.id}">
+        <div style="padding:8px 0;font-size:0.75rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Touchpoint Timeline — Started ${tpFmtDate(p.start_date)} | ${p.visit_count || 0} visits</div>
+        ${pTps.map(tp => {
+          const diff = tpDaysDiff(tp.due_date);
+          let dotCls = 'pending';
+          if (tp.status === 'completed') dotCls = 'completed';
+          else if (diff < 0) dotCls = 'overdue';
+          else if (diff === 0) dotCls = 'today';
+
+          return `<div class="tp-timeline-item ${tp.status === 'completed' ? 'done' : ''}">
+            <div class="tp-dot ${dotCls}"></div>
+            <div style="flex:1;font-weight:500">${escHtml(tp.touchpoint_name)}</div>
+            <div style="color:var(--text-dim);font-size:0.72rem">${tpFmtDate(tp.due_date)}</div>
+            ${tp.status !== 'completed' ? `<button class="tp-btn-done" onclick="event.stopPropagation();tpMarkDone('${tp.id}')">Done</button>` : '<span style="font-size:0.7rem;color:var(--success)">Done</span>'}
+          </div>`;
+        }).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  function tpToggle(id) {
+    const el = document.getElementById('tp-detail-' + id);
+    if (el) el.classList.toggle('open');
+  }
+
+  async function tpMarkDone(tpId) {
+    await fetch(`${SUPABASE_URL}/rest/v1/patient_touchpoints?id=eq.${tpId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: 'completed', completed_at: new Date().toISOString(), completed_by: 'dashboard' })
+    });
+    loadRetentionTracker();
+  }
+
+  async function tpMarkSkip(tpId) {
+    await fetch(`${SUPABASE_URL}/rest/v1/patient_touchpoints?id=eq.${tpId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: 'skipped', completed_at: new Date().toISOString() })
+    });
+    loadRetentionTracker();
+  }
+
+  // Load SEO data when dashboard loads (add to the existing flow)
+  const origLoadDashboard = loadDashboard;
+  loadDashboard = async function(period) {
+    await origLoadDashboard(period);
+    loadSEOData();
+    loadRetentionTracker();
+  };
 </script>
 </body>
 </html>
