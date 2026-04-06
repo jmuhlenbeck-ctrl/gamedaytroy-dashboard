@@ -1,157 +1,201 @@
 <!DOCTYPE html>
-<html><head><title>Lobbie Sync</title>
-<style>
-  body { font-family: Inter, sans-serif; background: #1a1a2e; color: #fff; display: flex;
-    align-items: center; justify-content: center; height: 100vh; margin: 0; }
-  .box { text-align: center; padding: 30px; }
-  .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2);
-    border-top-color: #cc0000; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #status { font-size: 14px; line-height: 1.6; }
-</style>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lobbie Sync — Bookmarklet Install</title>
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a1a2e; --accent: #cc0000; --accent-hover: #a80000;
+      --bg: #f4f5f7; --card: #ffffff; --text: #1a1a2e; --text-muted: #6b7a99;
+      --border: rgba(0,0,0,0.08); --success: #16a34a; --warning: #d97706;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08); --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .quick-links-bar {
+      background: var(--primary); padding: 8px 20px; display: flex; gap: 4px;
+      align-items: center; position: sticky; top: 0; z-index: 100;
+    }
+    .quick-link {
+      display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      color: rgba(255,255,255,0.7); text-decoration: none; white-space: nowrap;
+    }
+    .quick-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .quick-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+
+    .container { max-width: 700px; margin: 0 auto; padding: 30px 20px; }
+    h1 { font-size: 1.5rem; margin-bottom: 6px; }
+    .subtitle { color: var(--text-muted); margin-bottom: 28px; font-size: 0.9rem; }
+
+    .card { background: var(--card); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 16px; }
+    .card h3 { font-size: 1rem; margin-bottom: 12px; }
+
+    .step { display: flex; gap: 14px; margin-bottom: 18px; }
+    .step-num {
+      background: var(--accent); color: #fff; width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+    }
+    .step-text h3 { font-size: 0.95rem; margin-bottom: 3px; }
+    .step-text p { color: var(--text-muted); font-size: 0.82rem; line-height: 1.5; }
+
+    .bookmarklet-btn {
+      display: inline-block; background: var(--primary); color: #fff; padding: 14px 28px;
+      border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 1rem;
+      cursor: grab; transition: transform 0.15s; margin: 8px 0;
+    }
+    .bookmarklet-btn:hover { transform: scale(1.03); }
+    .bookmarklet-btn:active { cursor: grabbing; }
+    .bookmarklet-btn.clinical { background: #2563eb; }
+
+    .note {
+      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;
+      padding: 12px 16px; font-size: 0.78rem; color: #92400e; margin-top: 14px;
+    }
+
+    .code-block {
+      background: var(--primary); color: #e2e8f0; padding: 14px; border-radius: 8px;
+      font-family: monospace; font-size: 0.7rem; overflow-x: auto; word-break: break-all;
+      white-space: pre-wrap; max-height: 120px; overflow-y: auto; margin: 8px 0;
+    }
+    .copy-btn {
+      background: var(--accent); color: #fff; border: none; padding: 7px 16px;
+      border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.8rem;
+    }
+    .copy-btn:hover { background: var(--accent-hover); }
+    .copy-status { margin-left: 10px; color: var(--success); font-size: 0.78rem; display: none; }
+
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.78rem; }
+
+    .section-divider {
+      border: none; border-top: 2px solid var(--border); margin: 28px 0;
+    }
+
+    .status-badge {
+      display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .status-badge.ready { background: #dcfce7; color: #166534; }
+    .status-badge.new { background: #dbeafe; color: #1e40af; }
+  </style>
 </head>
 <body>
-<div class="box">
-  <div class="spinner" id="spinner"></div>
-  <div id="status">Syncing today's Lobbie billing...</div>
-</div>
-<script>
-const API_BASE = 'https://api-new-prod.lobbie.com/lobbie/api/secure/v1';
-const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co/rest/v1';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw';
-const LOCATION_ID = 1379;
+  <!-- NAV -->
+  <nav class="quick-links-bar">
+    <a href="index.html" class="quick-link">Dashboard</a>
+    <a href="patients.html" class="quick-link">Patient Retention</a>
+    <a href="health-scores.html" class="quick-link">Health Scores</a>
+    <a href="lobbie-sync.html" class="quick-link active">Lobbie Sync</a>
+  </nav>
 
-const statusEl = document.getElementById('status');
-const spinnerEl = document.getElementById('spinner');
+  <div class="container">
+    <h1>Lobbie Sync Bookmarklets</h1>
+    <p class="subtitle">Sync Lobbie data to the Gameday Dashboard — run these while logged into <a href="https://my.lobbie.com" target="_blank" style="color:var(--accent)">my.lobbie.com</a></p>
 
-function msg(t) { statusEl.innerHTML = t; }
+    <!-- ========== DAILY SYNC BOOKMARKLET ========== -->
+    <div class="card">
+      <h3>Daily Sync <span class="status-badge ready">Active</span></h3>
+      <p style="color:var(--text-muted);font-size:0.82rem;margin-bottom:16px;">Syncs today's appointments + billing to the dashboard. Run once per day.</p>
 
-async function syncToday() {
-  try {
-    // Step 1: Fetch recent invoices (first 3 pages = last ~300 invoices)
-    msg('Fetching recent invoices...');
-    let allInvoices = [];
-    for (let page = 0; page < 3; page++) {
-      const res = await fetch(API_BASE + '/staff/revenue-sentinel/invoices/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ locationId: LOCATION_ID, rowsPerPage: 100, pageNumber: page })
-      });
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <h3>Drag to your bookmarks bar</h3>
+          <p>Click and hold the button below, then drag it to your Chrome bookmarks toolbar</p>
+        </div>
+      </div>
 
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          msg('Not logged into Lobbie.<br>Please log in at <a href="https://my.lobbie.com" target="_blank" style="color:#cc0000">my.lobbie.com</a> first.');
-          return;
-        }
-        break;
-      }
+      <div style="text-align:center;">
+        <a class="bookmarklet-btn" id="daily-link" href="#">Sync Lobbie</a>
+      </div>
 
-      const data = await res.json();
-      const results = data.searchResults || [];
-      if (results.length === 0) break;
+      <div class="step" style="margin-top:16px;">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <h3>Go to <a href="https://my.lobbie.com" target="_blank">my.lobbie.com</a> and log in</h3>
+        </div>
+      </div>
 
-      // Only keep invoices from last 7 days with revenue
-      const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
-      const recent = results.filter(inv => {
-        if (inv.totalAmountCents <= 0) return false;
-        if (!inv.createdDateISO) return false;
-        return new Date(inv.createdDateISO) >= weekAgo;
-      });
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <h3>Click "Sync Lobbie" in your bookmarks bar</h3>
+          <p>A status overlay appears. Takes ~10 seconds. Dashboard updates automatically.</p>
+        </div>
+      </div>
 
-      allInvoices = allInvoices.concat(recent);
-      if (results.length < 100) break;
-      await new Promise(r => setTimeout(r, 100));
-    }
+      <details style="margin-top:12px;">
+        <summary style="cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-muted);">Manual setup (if drag doesn't work)</summary>
+        <div style="margin-top:10px;">
+          <ol style="font-size:0.8rem;color:var(--text-muted);line-height:2;padding-left:20px;">
+            <li>Right-click bookmarks bar &rarr; "Add page..."</li>
+            <li>Name: <strong>Sync Lobbie</strong></li>
+            <li>Paste this code as the URL:</li>
+          </ol>
+          <div class="code-block" id="daily-code"></div>
+          <button class="copy-btn" onclick="copyCode('daily-code')">Copy</button>
+          <span class="copy-status" id="daily-copy-status">Copied!</span>
+        </div>
+      </details>
+    </div>
 
-    if (allInvoices.length === 0) {
-      msg('No recent invoices found.');
-      done();
-      return;
-    }
+    <hr class="section-divider">
 
-    msg('Found ' + allInvoices.length + ' recent invoices.<br>Fetching line items...');
+    <!-- ========== CLINICAL DATA BOOKMARKLET ========== -->
+    <div class="card">
+      <h3>Clinical History Sync <span class="status-badge new">New</span></h3>
+      <p style="color:var(--text-muted);font-size:0.82rem;margin-bottom:16px;">Pulls patient visit history (last 90 days) for Health Score calculations. Run weekly or when needed.</p>
 
-    // Step 2: Get line items
-    let billingItems = [];
-    let processed = 0;
+      <div style="text-align:center;">
+        <a class="bookmarklet-btn clinical" id="clinical-link" href="#">Sync Clinical</a>
+      </div>
 
-    for (let i = 0; i < allInvoices.length; i += 5) {
-      const batch = allInvoices.slice(i, i + 5);
-      const details = await Promise.all(batch.map(async inv => {
-        try {
-          const r = await fetch(API_BASE + '/staff/revenue-sentinel/invoices/' + inv.id, { credentials: 'include' });
-          if (r.ok) return { inv, detail: await r.json() };
-        } catch(e) {}
-        return { inv, detail: null };
-      }));
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-top:12px;text-align:center;">Same setup — drag to bookmarks bar, run on my.lobbie.com</p>
 
-      for (const { inv, detail } of details) {
-        if (!detail || !detail.lineItems) continue;
-        const invDate = inv.createdDateISO ? inv.createdDateISO.split('T')[0] : null;
+      <details style="margin-top:12px;">
+        <summary style="cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-muted);">Manual setup</summary>
+        <div style="margin-top:10px;">
+          <div class="code-block" id="clinical-code"></div>
+          <button class="copy-btn" onclick="copyCode('clinical-code')">Copy</button>
+          <span class="copy-status" id="clinical-copy-status">Copied!</span>
+        </div>
+      </details>
+    </div>
 
-        for (const li of detail.lineItems) {
-          if (li.serviceRecurrenceType) continue;
-          const sd = li.serviceDetails || {};
-          if (sd.recurrenceType || sd.frequency > 0) continue;
+    <div class="note">
+      <strong>Why bookmarklets?</strong> Lobbie uses browser-only authentication (no API key yet). These bookmarklets run on the Lobbie page so they can use your login session. When Lobbie adds API key support (~May 2026), this will be replaced with automatic daily sync.
+    </div>
+  </div>
 
-          billingItems.push({
-            location_slug: 'troy',
-            date: invDate,
-            invoice_id: inv.id,
-            invoice_number: inv.invoiceNumber,
-            patient_name: inv.patientName,
-            patient_id: inv.accountPatientId,
-            line_item_name: li.careResourceName || '',
-            line_item_type: li.careResourceType || '',
-            amount_cents: li.totalAmountCents || 0,
-            billing_code: sd.billingCode || null,
-            invoice_status: (inv.statuses || []).join(','),
-            invoice_total_cents: inv.totalAmountCents
-          });
-        }
-      }
+  <script>
+    // ===== DAILY SYNC BOOKMARKLET CODE =====
+    const dailyCode = `javascript:void((async()=>{const W='https://n8n.alphaclinicai.com/webhook/lobbie-sync',B='https://api-new-prod.lobbie.com/lobbie/api/secure/v1',SU='https://sjyvvemjldsbiguyfkdp.supabase.co/rest/v1',SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw',LI=1379,I=[765,766,767,768,820];function C(t){if(!t)return'other';const l=t.toLowerCase();if(l.includes('initial consult')||l.includes('consult - no lab'))return'consult';if(l.includes('trt')||l.includes('testosterone')||l.includes('pellet')||l.includes('starting trt'))return'trt';if(l.includes('semaglutide')||l.includes('tirzepatide')||l.includes('glp')||l.includes('phentermine'))return'glp1';if(l.includes('gaineswave')||l.includes('gainswave'))return'gaineswave';if(l.includes('p-shot')||l.includes('p shot')||l.includes('trimix'))return'pshot';if(l.includes('peptide')||l.includes('hgh'))return'peptides';if(l.includes('lab')||l.includes('vitals'))return'labs';if(l.includes('vitamin')||l.includes('b12'))return'vitamin_shots';if(l.includes('consult')||l.includes('follow up')||l.includes('telehealth'))return'consult';return'other'}function S(c){return{0:'Scheduled',1:'Confirmed',3:'Checked In',5:'Checked Out',6:'No Show'}[c]||'Unknown'}const sh={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'};let o=document.getElementById('ls-ov');if(!o){o=document.createElement('div');o.id='ls-ov';o.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;padding:16px 24px;border-radius:12px;font-family:sans-serif;font-size:14px;color:white;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:400px;background:#1a1a2e';document.body.appendChild(o)}try{if(!location.hostname.includes('lobbie.com')){o.style.background='#cc0000';o.innerHTML='Open <a href="https://my.lobbie.com" style="color:#fff;text-decoration:underline">my.lobbie.com</a> first';setTimeout(()=>o.remove(),5000);return}o.textContent='Syncing...';const now=new Date(),ds=now.toISOString().split('T')[0];const sr=await fetch(B+'/staff/scheduling/search',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({schedulerConfigIds:I,startDateTime:new Date(now.getFullYear(),now.getMonth(),now.getDate(),4,0,0).toISOString(),endDateTime:new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,3,59,59).toISOString()})});const sd=await sr.json();let aa=[];(sd.schedules||[]).forEach(s=>aa=aa.concat(s.appointments||[]));o.textContent='Found '+aa.length+' appts...';const da=[];for(let i=0;i<aa.length;i+=5){const r=await Promise.all(aa.slice(i,i+5).map(async a=>{try{const r=await fetch(B+'/staff/scheduling/appointment/'+a.appointmentId,{credentials:'include'});if(r.ok)return r.json()}catch(e){}return{appointmentId:a.appointmentId,accountPatient:{firstName:a.firstName,lastName:a.lastName,accountPatientId:a.accountPatientId},appointmentType:null,appointmentStatus:a.status,schedulerConfigId:a.schedulerConfigId,startUnix:a.startUnix}}));da.push(...r)}const ap=da.map(d=>{const p=d.accountPatient||{},t=d.appointmentType||{},n=t.name||'';return{location_slug:'troy',date:ds,appointment_id:d.appointmentId,patient_name:((p.firstName||'')+' '+(p.lastName||'')).trim(),patient_first_name:p.firstName||'',patient_last_name:p.lastName||'',patient_id:p.accountPatientId||null,appointment_type:n,appointment_type_id:t.id||null,service_category:C(n),scheduler_config_id:d.schedulerConfigId,status:d.appointmentStatus,status_label:S(d.appointmentStatus),start_time:d.startUnix?new Date(d.startUnix*1000).toISOString():null,duration:t.duration||d.duration||null,practitioner_id:d.practitionerId||null,note:d.note||null}});const cc={};ap.forEach(a=>cc[a.service_category]=(cc[a.service_category]||0)+1);o.textContent='Fetching billing...';let bi=[];try{let ti=[],pg=0,go=true;while(go){const ir=await fetch(B+'/staff/revenue-sentinel/invoices/search',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({locationId:LI,rowsPerPage:100,pageNumber:pg})});const id=await ir.json();const rs=id.searchResults||[];if(!rs.length){go=false;break}ti=ti.concat(rs.filter(i=>i.createdDateISO&&i.createdDateISO.startsWith(ds)&&i.totalAmountCents>0));if(rs.some(i=>i.createdDateISO&&!i.createdDateISO.startsWith(ds)&&i.createdDateISO<ds)||rs.length<100)go=false;pg++;if(pg>=20)go=false}o.textContent='Found '+ti.length+' invoices...';for(let i=0;i<ti.length;i+=5){const dt=await Promise.all(ti.slice(i,i+5).map(async inv=>{try{const r=await fetch(B+'/staff/revenue-sentinel/invoices/'+inv.id,{credentials:'include'});if(r.ok)return{inv,d:await r.json()}}catch(e){}return{inv,d:null}}));for(const{inv,d}of dt){if(!d||!d.lineItems)continue;for(const li of d.lineItems){if(li.serviceRecurrenceType)continue;const sd=li.serviceDetails||{};if(sd.recurrenceType||sd.frequency>0)continue;bi.push({location_slug:'troy',date:ds,invoice_id:inv.id,invoice_number:inv.invoiceNumber,patient_name:inv.patientName,patient_id:inv.accountPatientId,line_item_name:li.careResourceName,line_item_type:li.careResourceType,amount_cents:li.totalAmountCents,billing_code:sd.billingCode||null,invoice_status:(inv.statuses||[]).join(','),invoice_total_cents:inv.totalAmountCents})}}}}catch(e){console.warn('Billing error:',e)}if(bi.length>0){o.textContent='Saving '+bi.length+' billing items...';await fetch(SU+'/billing_items?location_slug=eq.troy&date=eq.'+ds,{method:'DELETE',headers:sh});await fetch(SU+'/billing_items',{method:'POST',headers:{...sh,'Prefer':'return=minimal'},body:JSON.stringify(bi)})}o.textContent='Sending to dashboard...';await fetch(W,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:ds,location:'troy',appointmentCount:ap.length,appointments:ap,billingItemCount:bi.length,categoryCounts:cc,syncedAt:new Date().toISOString()})});o.innerHTML='<b>Synced '+ap.length+' appts + '+bi.length+' products!</b>';o.style.background='#16a34a';setTimeout(()=>o.remove(),5000)}catch(e){o.style.background='#cc0000';o.textContent='Error: '+e.message;setTimeout(()=>o.remove(),8000)}})())`;
 
-      processed += batch.length;
-      msg('Processing ' + processed + '/' + allInvoices.length + ' invoices...<br>' + billingItems.length + ' line items');
-      await new Promise(r => setTimeout(r, 150));
-    }
+    // ===== CLINICAL HISTORY BOOKMARKLET CODE =====
+    const clinicalCode = `javascript:void((async()=>{const B='https://api-new-prod.lobbie.com/lobbie/api/secure/v1',SU='https://sjyvvemjldsbiguyfkdp.supabase.co/rest/v1',SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw',LI=1379,SC=[765,766,767,768,820];function CAT(t){if(!t)return'other';const l=t.toLowerCase();if(l.includes('initial consult')||l.includes('consult - no lab'))return'consult';if(l.includes('trt')||l.includes('testosterone')||l.includes('pellet')||l.includes('starting trt'))return'trt';if(l.includes('semaglutide')||l.includes('tirzepatide')||l.includes('glp')||l.includes('phentermine'))return'glp1';if(l.includes('gaineswave')||l.includes('gainswave'))return'gaineswave';if(l.includes('p-shot')||l.includes('p shot')||l.includes('trimix'))return'pshot';if(l.includes('peptide')||l.includes('hgh'))return'peptides';if(l.includes('lab')||l.includes('vitals'))return'labs';if(l.includes('vitamin')||l.includes('b12'))return'vitamin_shots';if(l.includes('consult')||l.includes('follow up')||l.includes('telehealth'))return'consult';return'other'}const sh={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'};let o=document.getElementById('ls-ov');if(!o){o=document.createElement('div');o.id='ls-ov';o.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;padding:16px 24px;border-radius:12px;font-family:sans-serif;font-size:14px;color:white;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:420px;background:#2563eb';document.body.appendChild(o)}try{if(!location.hostname.includes('lobbie.com')){o.style.background='#cc0000';o.innerHTML='Open <a href="https://my.lobbie.com" style="color:#fff;text-decoration:underline">my.lobbie.com</a> first';setTimeout(()=>o.remove(),5000);return}o.textContent='Loading clinical history (90 days)...';const now=new Date();const endDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,3,59,59);const startDate=new Date(now);startDate.setDate(startDate.getDate()-90);startDate.setHours(4,0,0,0);let allAppts=[];for(let dayOff=0;dayOff<90;dayOff+=7){const ws=new Date(startDate);ws.setDate(ws.getDate()+dayOff);const we=new Date(ws);we.setDate(we.getDate()+7);if(we>endDate){we.setTime(endDate.getTime())}o.textContent='Scanning week '+(Math.floor(dayOff/7)+1)+'/13...';const sr=await fetch(B+'/staff/scheduling/search',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({schedulerConfigIds:SC,startDateTime:ws.toISOString(),endDateTime:we.toISOString()})});if(!sr.ok)continue;const sd=await sr.json();(sd.schedules||[]).forEach(s=>allAppts=allAppts.concat(s.appointments||[]))}o.textContent='Found '+allAppts.length+' appointments. Getting details...';const patientMap={};let done=0;for(let i=0;i<allAppts.length;i+=10){const batch=allAppts.slice(i,i+10);const details=await Promise.all(batch.map(async a=>{try{const r=await fetch(B+'/staff/scheduling/appointment/'+a.appointmentId,{credentials:'include'});if(r.ok)return r.json()}catch(e){}return{appointmentId:a.appointmentId,accountPatient:{firstName:a.firstName,lastName:a.lastName,accountPatientId:a.accountPatientId},appointmentType:null,appointmentStatus:a.status,startUnix:a.startUnix}}));for(const d of details){const p=d.accountPatient||{};const pid=p.accountPatientId;if(!pid)continue;const t=d.appointmentType||{};const typeName=t.name||'';const cat=CAT(typeName);const visitDate=d.startUnix?new Date(d.startUnix*1000).toISOString().split('T')[0]:null;if(!patientMap[pid]){patientMap[pid]={patient_id:pid,patient_name:((p.firstName||'')+' '+(p.lastName||'')).trim(),visits:[],noShows:0,cancellations:0,services:new Set()}}const pm=patientMap[pid];pm.services.add(cat);if(visitDate)pm.visits.push({date:visitDate,type:typeName,category:cat,status:d.appointmentStatus});if(d.appointmentStatus===6)pm.noShows++;if(d.appointmentStatus===7||d.appointmentStatus===8)pm.cancellations++}done+=batch.length;if(done%50===0)o.textContent='Processing '+done+'/'+allAppts.length+'...'}o.textContent='Building patient profiles...';const records=[];const todayStr=now.toISOString().split('T')[0];for(const[pid,pm]of Object.entries(patientMap)){const sorted=pm.visits.filter(v=>v.date).sort((a,b)=>b.date.localeCompare(a.date));const lastVisit=sorted.length?sorted[0].date:null;const daysSince=lastVisit?Math.floor((now-new Date(lastVisit+'T00:00:00'))/(1000*60*60*24)):999;const completedVisits=sorted.filter(v=>v.status===5||v.status===3||v.status===1||v.status===0);const svcs=Array.from(pm.services).filter(s=>s!=='other'&&s!=='consult'&&s!=='labs');records.push({location_slug:'troy',patient_id:parseInt(pid),patient_name:pm.patient_name,total_visits_90d:completedVisits.length,last_visit_date:lastVisit,days_since_last_visit:daysSince,no_shows_90d:pm.noShows,cancellations_90d:pm.cancellations,primary_service:svcs.length?svcs[0]:'unknown',all_services:svcs.join(','),visit_dates:sorted.slice(0,10).map(v=>v.date).join(','),synced_at:new Date().toISOString()})}o.textContent='Saving '+records.length+' patient profiles...';await fetch(SU+'/patient_visit_history?location_slug=eq.troy',{method:'DELETE',headers:sh});for(let i=0;i<records.length;i+=50){await fetch(SU+'/patient_visit_history',{method:'POST',headers:{...sh,'Prefer':'return=minimal'},body:JSON.stringify(records.slice(i,i+50))})}const atRisk=records.filter(r=>r.days_since_last_visit>30).length;const noShowers=records.filter(r=>r.no_shows_90d>0).length;o.innerHTML='<b>Synced '+records.length+' patients!</b><br><span style="font-size:12px;opacity:0.9">'+atRisk+' inactive (30+ days) | '+noShowers+' with no-shows</span>';o.style.background='#16a34a';setTimeout(()=>o.remove(),6000)}catch(e){o.style.background='#cc0000';o.textContent='Error: '+e.message;setTimeout(()=>o.remove(),8000)}})())`;
 
-    // Step 3: Write to Supabase
-    msg('Saving ' + billingItems.length + ' items to Supabase...');
+    // Set bookmarklet links
+    document.getElementById('daily-link').href = dailyCode;
+    document.getElementById('daily-code').textContent = dailyCode;
+    document.getElementById('clinical-link').href = clinicalCode;
+    document.getElementById('clinical-code').textContent = clinicalCode;
 
-    for (let i = 0; i < billingItems.length; i += 50) {
-      const batch = billingItems.slice(i, i + 50);
-      await fetch(SUPABASE_URL + '/billing_items', {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify(batch)
+    function copyCode(id) {
+      const text = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const s = document.getElementById(id + '-copy-status') || document.querySelector('#' + id + ' ~ .copy-status');
+        // Find the next sibling copy-status
+        const btn = document.getElementById(id).parentElement;
+        const status = btn.querySelector('.copy-status');
+        if (status) { status.style.display = 'inline'; setTimeout(() => status.style.display = 'none', 2000); }
       });
     }
-
-    msg('Synced ' + billingItems.length + ' billing items.');
-    done();
-
-  } catch(e) {
-    msg('Error: ' + e.message);
-    done();
-  }
-}
-
-function done() {
-  spinnerEl.style.display = 'none';
-  // Tell the opener we're done
-  if (window.opener) {
-    try { window.opener.postMessage({ type: 'lobbie-sync-done' }, '*'); } catch(e) {}
-  }
-  setTimeout(() => window.close(), 2000);
-}
-
-syncToday();
-</script>
-</body></html>
+  </script>
+</body>
+</html>

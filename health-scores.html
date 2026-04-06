@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Patient Health Scores — Gameday Men's Health</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a1a2e; --primary-light: #2a2a4a;
+      --accent: #cc0000; --accent-hover: #a80000;
+      --bg: #f4f5f7; --card: #ffffff; --text: #1a1a2e;
+      --text-muted: #6b7a99; --text-dim: #9ca3af;
+      --border: rgba(0,0,0,0.08);
+      --success: #16a34a; --warning: #d97706; --danger: #cc0000;
+      --blue: #2563eb; --purple: #7c3aed; --teal: #0d9488;
+      --orange: #ea580c;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+
+    /* NAV */
+    .quick-links-bar {
+      background: var(--primary); padding: 8px 20px; display: flex; gap: 4px;
+      align-items: center; position: sticky; top: 0; z-index: 100;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .quick-link {
+      display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      color: rgba(255,255,255,0.7); text-decoration: none; white-space: nowrap; transition: all 0.15s;
+    }
+    .quick-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .quick-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+
+    /* PIN */
+    .pin-overlay {
+      position: fixed; inset: 0; background: #fff; z-index: 9999;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+    }
+    .pin-overlay.hidden { display: none; }
+    .pin-overlay h2 { font-size: 1.5rem; margin-bottom: 8px; color: var(--primary); }
+    .pin-overlay p { color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; }
+    .pin-input {
+      width: 200px; padding: 14px; font-size: 2rem; text-align: center;
+      border: 2px solid var(--border); border-radius: var(--radius);
+      letter-spacing: 12px; font-family: inherit; outline: none;
+    }
+    .pin-input:focus { border-color: var(--accent); }
+    .pin-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none; }
+
+    /* HEADER */
+    .header {
+      background: var(--primary); padding: 20px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-left h1 { color: #fff; font-size: 1.25rem; font-weight: 700; }
+    .header-left p { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-top: 2px; }
+    .header-right { display: flex; gap: 10px; align-items: center; }
+    .refresh-btn {
+      background: rgba(255,255,255,0.12); border: none; border-radius: 8px; padding: 8px;
+      cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+    .main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    /* SECTION */
+    .section-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--text-muted); margin: 24px 0 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* KPI GRID */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .kpi-card {
+      background: var(--card); border-radius: var(--radius); padding: 16px 18px;
+      box-shadow: var(--shadow); border-left: 4px solid var(--border); transition: transform 0.15s;
+    }
+    .kpi-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+    .kpi-card.green { border-left-color: var(--success); }
+    .kpi-card.yellow { border-left-color: var(--warning); }
+    .kpi-card.orange { border-left-color: var(--orange); }
+    .kpi-card.red { border-left-color: var(--danger); }
+    .kpi-card.blue { border-left-color: var(--blue); }
+    .kpi-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .kpi-value { font-size: 1.6rem; font-weight: 800; margin-top: 4px; }
+
+    /* RISK BAR */
+    .risk-bar { display: flex; gap: 2px; height: 32px; border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: var(--card); box-shadow: var(--shadow); }
+    .risk-segment { transition: width 0.5s; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: #fff; min-width: 0; }
+    .risk-segment.green { background: var(--success); }
+    .risk-segment.yellow { background: var(--warning); }
+    .risk-segment.orange { background: var(--orange); }
+    .risk-segment.red { background: var(--danger); }
+
+    /* FILTERS */
+    .filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+    .filter-btn {
+      padding: 7px 16px; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--card); color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+    .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .filter-btn.green-active { background: var(--success); color: #fff; border-color: var(--success); }
+    .filter-btn.yellow-active { background: var(--warning); color: #fff; border-color: var(--warning); }
+    .filter-btn.orange-active { background: var(--orange); color: #fff; border-color: var(--orange); }
+    .filter-btn.red-active { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+    .search-bar {
+      flex: 1; min-width: 180px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.82rem; font-family: inherit; background: var(--card);
+    }
+    .search-bar:focus { outline: none; border-color: var(--accent); }
+
+    /* PATIENT LIST */
+    .patient-list { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .p-row {
+      display: grid; grid-template-columns: 50px 1fr 100px 80px 80px 100px;
+      align-items: center; padding: 12px 16px; gap: 10px;
+      border-bottom: 1px solid var(--border); transition: background 0.1s; font-size: 0.82rem;
+    }
+    .p-row:last-child { border-bottom: none; }
+    .p-row:hover { background: #f8f9fb; }
+    .p-row.header { background: #f8f9fb; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+
+    .score-circle {
+      width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem; color: #fff;
+    }
+    .score-circle.green { background: var(--success); }
+    .score-circle.yellow { background: var(--warning); }
+    .score-circle.orange { background: var(--orange); }
+    .score-circle.red { background: var(--danger); }
+
+    .p-name { font-weight: 600; }
+    .p-service { font-size: 0.72rem; color: var(--text-muted); }
+    .p-detail { font-size: 0.78rem; color: var(--text-muted); text-align: center; }
+
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+    }
+    .badge-green { background: #f0fdf4; color: var(--success); }
+    .badge-yellow { background: #fefce8; color: var(--warning); }
+    .badge-orange { background: #fff7ed; color: var(--orange); }
+    .badge-red { background: #fef2f2; color: var(--danger); }
+
+    .change-up { color: var(--danger); font-size: 0.72rem; font-weight: 600; }
+    .change-down { color: var(--success); font-size: 0.72rem; font-weight: 600; }
+    .change-flat { color: var(--text-dim); font-size: 0.72rem; }
+
+    /* RISK FLAGS */
+    .flags { display: flex; gap: 4px; flex-wrap: wrap; }
+    .flag {
+      padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 600;
+      background: #fef2f2; color: var(--danger); white-space: nowrap;
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 0.9rem;
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .empty-state h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { max-width: 400px; margin: 0 auto; line-height: 1.6; }
+    .empty-state .setup-link {
+      display: inline-block; margin-top: 16px; padding: 10px 24px; background: var(--accent);
+      color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.85rem;
+    }
+
+    /* DETAIL MODAL */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 9999; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 14px; padding: 28px; width: 440px; max-width: 95vw;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2); max-height: 85vh; overflow-y: auto;
+    }
+    .modal h3 { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+    .modal-section { margin-bottom: 18px; }
+    .modal-section h4 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+    .score-bar { height: 8px; border-radius: 4px; background: #f1f5f9; overflow: hidden; margin-bottom: 6px; }
+    .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+    .score-row { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 4px; }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; background: none; border: none;
+      font-size: 1.2rem; cursor: pointer; color: var(--text-muted); padding: 4px 8px;
+    }
+
+    /* LAST SYNC */
+    .sync-info { font-size: 0.75rem; color: var(--text-dim); margin-top: 20px; text-align: center; }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .p-row { grid-template-columns: 42px 1fr 70px 60px; font-size: 0.78rem; }
+      .p-row .p-detail:nth-child(5), .p-row .p-detail:nth-child(6) { display: none; }
+      .p-row.header .p-detail:nth-child(5), .p-row.header .p-detail:nth-child(6) { display: none; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <!-- PIN -->
+  <div class="pin-overlay" id="pinOverlay">
+    <h2>Health Scores</h2>
+    <p>Enter PIN to access</p>
+    <input type="password" class="pin-input" id="pinInput" maxlength="4" inputmode="numeric" autofocus>
+    <div class="pin-error" id="pinError">Incorrect PIN</div>
+  </div>
+
+  <!-- NAV -->
+  <nav class="quick-links-bar">
+    <a href="index.html" class="quick-link">Dashboard</a>
+    <a href="patients.html" class="quick-link">Patient Retention</a>
+    <a href="health-scores.html" class="quick-link active">Health Scores</a>
+    <a href="lobbie-sync.html" class="quick-link">Lobbie Sync</a>
+  </nav>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <h1>Patient Health Scores</h1>
+      <p>Churn Risk Monitor — Troy, MI</p>
+    </div>
+    <div class="header-right">
+      <span id="headerDate" style="color:rgba(255,255,255,0.8);font-size:0.85rem;font-weight:500"></span>
+      <button class="refresh-btn" onclick="loadAll()" title="Refresh">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v5h5M17 14v-5h-5"/><path d="M3.5 13A7 7 0 0114.3 4.5L17 9M14.5 5A7 7 0 003.7 13.5L1 9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- DETAIL MODAL -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal" style="position:relative;">
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- KPIs -->
+    <div class="section-title">Overview</div>
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-label">Total Patients</div>
+        <div class="kpi-value" id="kpiTotal">-</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Healthy (0-29)</div>
+        <div class="kpi-value" id="kpiGreen">-</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-label">Watch (30-49)</div>
+        <div class="kpi-value" id="kpiYellow">-</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-label">At Risk (50-79)</div>
+        <div class="kpi-value" id="kpiOrange">-</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Critical (80+)</div>
+        <div class="kpi-value" id="kpiRed">-</div>
+      </div>
+    </div>
+
+    <!-- RISK BAR -->
+    <div class="section-title" style="margin-top:20px;">Risk Distribution</div>
+    <div class="risk-bar" id="riskBar"></div>
+
+    <!-- FILTERS -->
+    <div class="section-title">Patients</div>
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+      <button class="filter-btn" data-filter="red" onclick="setFilter('red',this)">Critical</button>
+      <button class="filter-btn" data-filter="orange" onclick="setFilter('orange',this)">At Risk</button>
+      <button class="filter-btn" data-filter="yellow" onclick="setFilter('yellow',this)">Watch</button>
+      <button class="filter-btn" data-filter="green" onclick="setFilter('green',this)">Healthy</button>
+      <input type="text" class="search-bar" id="searchBar" placeholder="Search patients..." oninput="renderList()">
+    </div>
+
+    <!-- PATIENT LIST -->
+    <div id="patientList"></div>
+
+    <!-- SYNC INFO -->
+    <div class="sync-info" id="syncInfo"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw';
+    const PIN = '1234';
+    const LOCATION = 'troy';
+
+    // PIN
+    const pinOverlay = document.getElementById('pinOverlay');
+    const pinInput = document.getElementById('pinInput');
+    if (sessionStorage.getItem('gd_pin_ok') === '1') { pinOverlay.classList.add('hidden'); loadAll(); }
+    pinInput.addEventListener('input', () => {
+      if (pinInput.value.length === 4) {
+        if (pinInput.value === PIN) {
+          sessionStorage.setItem('gd_pin_ok', '1');
+          pinOverlay.classList.add('hidden');
+          loadAll();
+        } else {
+          document.getElementById('pinError').style.display = 'block';
+          pinInput.value = '';
+          setTimeout(() => document.getElementById('pinError').style.display = 'none', 2000);
+        }
+      }
+    });
+
+    // Date
+    document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+    // State
+    let allScores = [];
+    let currentFilter = 'all';
+
+    // Supabase
+    async function sbGet(table, query) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      return r.json();
+    }
+
+    // Filter
+    function setFilter(f, btn) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('active', 'green-active', 'yellow-active', 'orange-active', 'red-active');
+      });
+      if (f === 'all') btn.classList.add('active');
+      else btn.classList.add(f + '-active');
+      renderList();
+    }
+
+    // Service labels
+    const serviceLabels = {
+      trt: 'TRT', glp1: 'GLP-1', gaineswave: 'GAINSWave', pshot: 'P-Shot',
+      peptides: 'Peptides', labs: 'Labs', consult: 'Consult', other: 'Other', unknown: 'Unknown'
+    };
+
+    function riskColor(level) {
+      return { green: 'var(--success)', yellow: 'var(--warning)', orange: 'var(--orange)', red: 'var(--danger)' }[level] || '#999';
+    }
+
+    // Render
+    function renderList() {
+      const q = (document.getElementById('searchBar').value || '').toLowerCase().trim();
+      let filtered = allScores;
+      if (currentFilter !== 'all') filtered = filtered.filter(s => s.risk_level === currentFilter);
+      if (q) filtered = filtered.filter(s => s.patient_name.toLowerCase().includes(q));
+
+      if (filtered.length === 0 && allScores.length === 0) {
+        document.getElementById('patientList').innerHTML = `
+          <div class="empty-state">
+            <h3>No Health Scores Yet</h3>
+            <p>Run the <strong>Clinical History</strong> bookmarklet on Lobbie to sync patient visit data, then the scoring engine will calculate health scores automatically.</p>
+            <a href="lobbie-sync.html" class="setup-link">Setup Bookmarklets</a>
+          </div>`;
+        return;
+      }
+
+      if (filtered.length === 0) {
+        document.getElementById('patientList').innerHTML = '<div class="empty-state"><p>No patients match this filter.</p></div>';
+        return;
+      }
+
+      let html = `<div class="patient-list">
+        <div class="p-row header">
+          <div>Score</div><div>Patient</div><div style="text-align:center">Last Visit</div>
+          <div style="text-align:center">Visits</div><div style="text-align:center">No-Shows</div>
+          <div style="text-align:center">Trend</div>
+        </div>`;
+
+      for (const s of filtered) {
+        const change = s.score_change || 0;
+        let changeHtml = '<span class="change-flat">--</span>';
+        if (change > 0) changeHtml = `<span class="change-up">+${change}</span>`;
+        else if (change < 0) changeHtml = `<span class="change-down">${change}</span>`;
+
+        const daysText = s.days_since_last_visit != null
+          ? (s.days_since_last_visit === 0 ? 'Today' : s.days_since_last_visit + 'd ago')
+          : '--';
+
+        html += `<div class="p-row" style="cursor:pointer" onclick="showDetail('${s.patient_name.replace(/'/g, "\\'")}')">
+          <div><div class="score-circle ${s.risk_level}">${s.health_score}</div></div>
+          <div>
+            <div class="p-name">${esc(s.patient_name)}</div>
+            <div class="p-service">${serviceLabels[s.primary_service] || s.primary_service || '--'}</div>
+          </div>
+          <div class="p-detail">${daysText}</div>
+          <div class="p-detail">${s.total_visits_90d != null ? s.total_visits_90d : '--'}</div>
+          <div class="p-detail">${s.no_shows_90d || 0}</div>
+          <div class="p-detail">${changeHtml}</div>
+        </div>`;
+      }
+
+      html += '</div>';
+      document.getElementById('patientList').innerHTML = html;
+    }
+
+    function renderKPIs() {
+      const green = allScores.filter(s => s.risk_level === 'green').length;
+      const yellow = allScores.filter(s => s.risk_level === 'yellow').length;
+      const orange = allScores.filter(s => s.risk_level === 'orange').length;
+      const red = allScores.filter(s => s.risk_level === 'red').length;
+      const total = allScores.length;
+
+      document.getElementById('kpiTotal').textContent = total;
+      document.getElementById('kpiGreen').textContent = green;
+      document.getElementById('kpiYellow').textContent = yellow;
+      document.getElementById('kpiOrange').textContent = orange;
+      document.getElementById('kpiRed').textContent = red;
+
+      // Risk bar
+      const bar = document.getElementById('riskBar');
+      if (total === 0) { bar.innerHTML = ''; return; }
+      bar.innerHTML = [
+        { cls: 'green', count: green, label: 'Healthy' },
+        { cls: 'yellow', count: yellow, label: 'Watch' },
+        { cls: 'orange', count: orange, label: 'At Risk' },
+        { cls: 'red', count: red, label: 'Critical' }
+      ].filter(s => s.count > 0).map(s => {
+        const pct = (s.count / total * 100).toFixed(1);
+        return `<div class="risk-segment ${s.cls}" style="width:${pct}%">${pct > 8 ? s.count : ''}</div>`;
+      }).join('');
+    }
+
+    // Detail modal
+    function showDetail(name) {
+      const s = allScores.find(x => x.patient_name === name);
+      if (!s) return;
+
+      const flags = (s.risk_flags || '').split(',').filter(f => f.trim());
+      const flagsHtml = flags.length
+        ? flags.map(f => `<span class="flag">${f.trim()}</span>`).join('')
+        : '<span style="color:var(--text-dim);font-size:0.82rem">None</span>';
+
+      document.getElementById('modalContent').innerHTML = `
+        <h3>
+          <div class="score-circle ${s.risk_level}" style="width:44px;height:44px;font-size:0.9rem">${s.health_score}</div>
+          ${esc(s.patient_name)}
+        </h3>
+
+        <div class="modal-section">
+          <h4>Score Breakdown</h4>
+          ${scoreBarRow('Visit Pattern', s.visit_score || 0, 40, s.risk_level)}
+          ${scoreBarRow('Payment', s.payment_score || 0, 35, s.risk_level)}
+          ${scoreBarRow('Engagement', s.engagement_score || 0, 15, s.risk_level)}
+          ${scoreBarRow('Sentiment', s.sentiment_score || 0, 10, s.risk_level)}
+        </div>
+
+        <div class="modal-section">
+          <h4>Key Metrics</h4>
+          <div class="score-row"><span>Days since last visit</span><strong>${s.days_since_last_visit != null ? s.days_since_last_visit : '--'}</strong></div>
+          <div class="score-row"><span>Visits (90 days)</span><strong>${s.total_visits_90d != null ? s.total_visits_90d : '--'}</strong></div>
+          <div class="score-row"><span>No-shows (90 days)</span><strong>${s.no_shows_90d || 0}</strong></div>
+          <div class="score-row"><span>Declined payments</span><strong>${s.declined_payments || 0}</strong></div>
+          <div class="score-row"><span>Primary service</span><strong>${serviceLabels[s.primary_service] || '--'}</strong></div>
+        </div>
+
+        <div class="modal-section">
+          <h4>Risk Flags</h4>
+          <div class="flags">${flagsHtml}</div>
+        </div>
+
+        <div style="font-size:0.75rem;color:var(--text-dim);margin-top:12px;">
+          Last calculated: ${s.last_calculated ? new Date(s.last_calculated).toLocaleString() : '--'}
+        </div>
+      `;
+      document.getElementById('detailModal').classList.add('open');
+    }
+
+    function scoreBarRow(label, value, max, level) {
+      const pct = max > 0 ? Math.min(value / max * 100, 100) : 0;
+      return `
+        <div class="score-row"><span>${label}</span><span>${value}/${max}</span></div>
+        <div class="score-bar"><div class="score-bar-fill" style="width:${pct}%;background:${riskColor(level)}"></div></div>`;
+    }
+
+    function closeModal() { document.getElementById('detailModal').classList.remove('open'); }
+    document.getElementById('detailModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('detailModal')) closeModal();
+    });
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+    // Load
+    async function loadAll() {
+      try {
+        // Try health scores first
+        const scores = await sbGet('patient_health_scores',
+          `location_slug=eq.${LOCATION}&order=health_score.desc`
+        );
+
+        if (scores && scores.length > 0) {
+          allScores = scores;
+        } else {
+          // Fall back to visit history (pre-scoring — show raw visit data as scores)
+          const visits = await sbGet('patient_visit_history',
+            `location_slug=eq.${LOCATION}&order=days_since_last_visit.desc`
+          );
+
+          if (visits && visits.length > 0) {
+            // Generate preliminary scores from visit data
+            allScores = visits.map(v => {
+              let score = 0;
+              const flags = [];
+
+              // Visit pattern scoring
+              if (v.days_since_last_visit > 60) { score += 40; flags.push('60+ days inactive'); }
+              else if (v.days_since_last_visit > 30) { score += 20; flags.push('30+ days inactive'); }
+              else if (v.days_since_last_visit > 14) { score += 8; }
+
+              // No-show scoring
+              if (v.no_shows_90d >= 3) { score += 20; flags.push('3+ no-shows'); }
+              else if (v.no_shows_90d >= 1) { score += 10; flags.push('No-show history'); }
+
+              // Cancellation scoring
+              if (v.cancellations_90d >= 2) { score += 10; flags.push('Multiple cancellations'); }
+
+              // Low visit frequency
+              if (v.total_visits_90d <= 1) { score += 10; flags.push('Low visit frequency'); }
+
+              score = Math.min(score, 100);
+              let risk = 'green';
+              if (score >= 80) risk = 'red';
+              else if (score >= 50) risk = 'orange';
+              else if (score >= 30) risk = 'yellow';
+
+              return {
+                patient_name: v.patient_name,
+                health_score: score,
+                risk_level: risk,
+                visit_score: Math.min(v.days_since_last_visit > 60 ? 40 : v.days_since_last_visit > 30 ? 20 : v.days_since_last_visit > 14 ? 8 : 0, 40),
+                payment_score: 0,
+                engagement_score: v.no_shows_90d >= 3 ? 15 : v.no_shows_90d >= 1 ? 8 : 0,
+                sentiment_score: 0,
+                days_since_last_visit: v.days_since_last_visit,
+                total_visits_90d: v.total_visits_90d,
+                no_shows_90d: v.no_shows_90d,
+                declined_payments: 0,
+                primary_service: v.primary_service,
+                risk_flags: flags.join(','),
+                score_change: 0,
+                last_calculated: v.synced_at
+              };
+            });
+          } else {
+            allScores = [];
+          }
+        }
+
+        renderKPIs();
+        renderList();
+
+        // Sync info
+        if (allScores.length > 0) {
+          const latest = allScores[0].last_calculated;
+          document.getElementById('syncInfo').textContent = latest
+            ? 'Last updated: ' + new Date(latest).toLocaleString()
+            : '';
+        }
+
+      } catch (e) {
+        console.error('Load error:', e);
+        document.getElementById('patientList').innerHTML = '<div class="empty-state"><p>Error loading data. Check console.</p></div>';
+      }
+    }
+  </script>
+</body>
+</html>
