@@ -1107,8 +1107,8 @@
       return '#9ca3af';
     }
 
-    // Use transactions table — has product descriptions from Lobbie cross-reference
-    const approvedTxns = (txnData || []).filter(t => t.status === 'Approved' || t.status === 'Settled' || t.status === 'Paid');
+    // Use transactions table — new sales only (no recurring)
+    const approvedTxns = (txnData || []).filter(t => (t.status === 'Approved' || t.status === 'Settled' || t.status === 'Paid') && t.revenue_type === 'new');
     const categorizedTxns = approvedTxns.filter(t => t.product_description && t.product_description !== 'N/A');
 
     if (categorizedTxns.length > 0) {
