@@ -1088,10 +1088,9 @@
     document.getElementById('clin-hours').textContent = totalHours.toFixed(0) + ' hrs';
     document.getElementById('clin-per-hour').textContent = $d(revenuePerHour);
 
-    // Product breakdown - use Lobbie billing line items (real product names)
+    // Product breakdown - use transactions (cross-referenced with Lobbie billing)
     const productDiv = document.getElementById('product-breakdown');
     productDiv.innerHTML = '';
-    const billing = billingData || [];
 
     // Color by product type
     const productColorMap = {
@@ -1108,27 +1107,32 @@
       return '#9ca3af';
     }
 
-    if (billing.length > 0) {
-      // Use billing line items directly — already filtered to initial payments only
-      const maxAmt = Math.max(...billing.map(b => parseInt(b.amount_cents || 0)), 1);
-      for (const b of billing) {
-        const amt = parseInt(b.amount_cents || 0) / 100;
-        const pct = maxAmt > 0 ? (parseInt(b.amount_cents || 0) / maxAmt) * 100 : 0;
-        const color = getProductColor(b.line_item_name || '');
+    // Use transactions table — has product descriptions from Lobbie cross-reference
+    const approvedTxns = (txnData || []).filter(t => t.status === 'Approved' || t.status === 'Settled' || t.status === 'Paid');
+    const categorizedTxns = approvedTxns.filter(t => t.product_description && t.product_description !== 'N/A');
+
+    if (categorizedTxns.length > 0) {
+      const maxAmt = Math.max(...categorizedTxns.map(t => parseFloat(t.amount || 0)), 1);
+      for (const t of categorizedTxns) {
+        const amt = parseFloat(t.amount || 0);
+        const pct = maxAmt > 0 ? (amt / maxAmt) * 100 : 0;
+        const color = getProductColor(t.product_description || '');
         productDiv.innerHTML += `
           <div class="product-card">
             <div class="product-row">
               <div class="product-info">
-                <div class="product-name">${escHtml(b.line_item_name || '')}</div>
-                <div class="product-patient">${escHtml(b.patient_name || '')}</div>
+                <div class="product-name">${escHtml(t.product_description || '')}</div>
+                <div class="product-patient">${escHtml(t.customer_name || '')}</div>
               </div>
               <div class="product-amount">${$d(amt)}</div>
             </div>
             <div class="product-bar"><div class="product-bar-fill" style="width:${pct}%;background:${color}"></div></div>
           </div>`;
       }
+    } else if (approvedTxns.length > 0) {
+      productDiv.innerHTML = '<div class="product-empty">Transactions found but no product details — Lobbie billing sync may be needed</div>';
     } else {
-      productDiv.innerHTML = '<div class="product-empty">No billing data — run Lobbie Sync to see product breakdown</div>';
+      productDiv.innerHTML = '<div class="product-empty">No transaction data for this period</div>';
     }
 
     // Daily trend
