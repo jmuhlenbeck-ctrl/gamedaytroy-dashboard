@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html><head><title>Lobbie Sync</title>
+<style>
+  body { font-family: Inter, sans-serif; background: #1a1a2e; color: #fff; display: flex;
+    align-items: center; justify-content: center; height: 100vh; margin: 0; }
+  .box { text-align: center; padding: 30px; }
+  .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2);
+    border-top-color: #cc0000; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #status { font-size: 14px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="spinner" id="spinner"></div>
+  <div id="status">Syncing today's Lobbie billing...</div>
+</div>
+<script>
+const API_BASE = 'https://api-new-prod.lobbie.com/lobbie/api/secure/v1';
+const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co/rest/v1';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw';
+const LOCATION_ID = 1379;
+
+const statusEl = document.getElementById('status');
+const spinnerEl = document.getElementById('spinner');
+
+function msg(t) { statusEl.innerHTML = t; }
+
+async function syncToday() {
+  try {
+    // Step 1: Fetch recent invoices (first 3 pages = last ~300 invoices)
+    msg('Fetching recent invoices...');
+    let allInvoices = [];
+    for (let page = 0; page < 3; page++) {
+      const res = await fetch(API_BASE + '/staff/revenue-sentinel/invoices/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ locationId: LOCATION_ID, rowsPerPage: 100, pageNumber: page })
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          msg('Not logged into Lobbie.<br>Please log in at <a href="https://my.lobbie.com" target="_blank" style="color:#cc0000">my.lobbie.com</a> first.');
+          return;
+        }
+        break;
+      }
+
+      const data = await res.json();
+      const results = data.searchResults || [];
+      if (results.length === 0) break;
+
+      // Only keep invoices from last 7 days with revenue
+      const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+      const recent = results.filter(inv => {
+        if (inv.totalAmountCents <= 0) return false;
+        if (!inv.createdDateISO) return false;
+        return new Date(inv.createdDateISO) >= weekAgo;
+      });
+
+      allInvoices = allInvoices.concat(recent);
+      if (results.length < 100) break;
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    if (allInvoices.length === 0) {
+      msg('No recent invoices found.');
+      done();
+      return;
+    }
+
+    msg('Found ' + allInvoices.length + ' recent invoices.<br>Fetching line items...');
+
+    // Step 2: Get line items
+    let billingItems = [];
+    let processed = 0;
+
+    for (let i = 0; i < allInvoices.length; i += 5) {
+      const batch = allInvoices.slice(i, i + 5);
+      const details = await Promise.all(batch.map(async inv => {
+        try {
+          const r = await fetch(API_BASE + '/staff/revenue-sentinel/invoices/' + inv.id, { credentials: 'include' });
+          if (r.ok) return { inv, detail: await r.json() };
+        } catch(e) {}
+        return { inv, detail: null };
+      }));
+
+      for (const { inv, detail } of details) {
+        if (!detail || !detail.lineItems) continue;
+        const invDate = inv.createdDateISO ? inv.createdDateISO.split('T')[0] : null;
+
+        for (const li of detail.lineItems) {
+          if (li.serviceRecurrenceType) continue;
+          const sd = li.serviceDetails || {};
+          if (sd.recurrenceType || sd.frequency > 0) continue;
+
+          billingItems.push({
+            location_slug: 'troy',
+            date: invDate,
+            invoice_id: inv.id,
+            invoice_number: inv.invoiceNumber,
+            patient_name: inv.patientName,
+            patient_id: inv.accountPatientId,
+            line_item_name: li.careResourceName || '',
+            line_item_type: li.careResourceType || '',
+            amount_cents: li.totalAmountCents || 0,
+            billing_code: sd.billingCode || null,
+            invoice_status: (inv.statuses || []).join(','),
+            invoice_total_cents: inv.totalAmountCents
+          });
+        }
+      }
+
+      processed += batch.length;
+      msg('Processing ' + processed + '/' + allInvoices.length + ' invoices...<br>' + billingItems.length + ' line items');
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    // Step 3: Write to Supabase
+    msg('Saving ' + billingItems.length + ' items to Supabase...');
+
+    for (let i = 0; i < billingItems.length; i += 50) {
+      const batch = billingItems.slice(i, i + 50);
+      await fetch(SUPABASE_URL + '/billing_items', {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(batch)
+      });
+    }
+
+    msg('Synced ' + billingItems.length + ' billing items.');
+    done();
+
+  } catch(e) {
+    msg('Error: ' + e.message);
+    done();
+  }
+}
+
+function done() {
+  spinnerEl.style.display = 'none';
+  // Tell the opener we're done
+  if (window.opener) {
+    try { window.opener.postMessage({ type: 'lobbie-sync-done' }, '*'); } catch(e) {}
+  }
+  setTimeout(() => window.close(), 2000);
+}
+
+syncToday();
+</script>
+</body></html>
