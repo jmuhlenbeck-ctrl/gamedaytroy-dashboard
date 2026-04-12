@@ -482,6 +482,7 @@
       text-transform: uppercase; letter-spacing: 0.5px;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -773,6 +774,12 @@
         </div>
       </div>
 
+      <!-- Revenue Trend Chart -->
+      <div class="trend-card" id="forecast-chart-wrap" style="display:none;margin-top:12px;padding:16px;">
+        <div style="font-weight:600;margin-bottom:8px;color:var(--text);">Revenue Trend (Last 30 Days)</div>
+        <canvas id="revenue-trend-chart" height="220"></canvas>
+      </div>
+
       <!-- Forecast Details Card -->
       <div class="trend-card" id="forecast-details" style="display:none;margin-top:12px;">
         <table class="trend-table">
@@ -791,6 +798,12 @@
     <div id="tag-analytics-section" style="margin-top:32px;">
       <div class="section-title">Tag Conversion Analytics</div>
       <div id="tag-empty" style="text-align:center;color:var(--text-muted);padding:30px;background:var(--card);border-radius:var(--radius);">Loading tag data...</div>
+
+      <!-- No-Show / Cancelled Bar Chart -->
+      <div class="trend-card" id="tag-chart-wrap" style="display:none;margin-bottom:12px;padding:16px;">
+        <div style="font-weight:600;margin-bottom:8px;color:var(--text);">Top 10 Tags — No-Show &amp; Cancelled</div>
+        <canvas id="tag-noshow-chart" height="300"></canvas>
+      </div>
 
       <div class="trend-card" id="tag-table-wrap" style="display:none;">
         <table class="trend-table">
@@ -1909,6 +1922,161 @@
     }
   }
 
+  // ── Revenue Trend Chart ──
+  let revenueTrendChartInstance = null;
+  async function loadForecastChart() {
+    try {
+      const rows = await supaFetch('revenue_forecast',
+        'location_slug=eq.troy&order=report_date.desc&limit=30');
+      if (!rows || rows.length < 2) return;
+      rows.reverse(); // oldest first
+
+      const labels = rows.map(r => {
+        const d = new Date(r.report_date);
+        return (d.getMonth() + 1) + '/' + d.getDate();
+      });
+      const mtdData = rows.map(r => Number(r.mtd_revenue || 0));
+      const projData = rows.map(r => Number(r.projected_month_revenue || 0));
+
+      document.getElementById('forecast-chart-wrap').style.display = '';
+      const ctx = document.getElementById('revenue-trend-chart').getContext('2d');
+
+      if (revenueTrendChartInstance) revenueTrendChartInstance.destroy();
+      revenueTrendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'MTD Revenue',
+              data: mtdData,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37,99,235,0.1)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              borderWidth: 2
+            },
+            {
+              label: 'Projected Month Revenue',
+              data: projData,
+              borderColor: '#16a34a',
+              backgroundColor: 'rgba(22,163,74,0.08)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+              borderWidth: 2,
+              borderDash: [6, 3]
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              labels: { color: '#6b7a99', font: { family: 'Inter', size: 12 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return ctx.dataset.label + ': $' + Number(ctx.raw).toLocaleString();
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#6b7a99', font: { size: 11 } },
+              grid: { color: 'rgba(0,0,0,0.05)' }
+            },
+            y: {
+              ticks: {
+                color: '#6b7a99',
+                font: { size: 11 },
+                callback: function(v) { return '$' + (v / 1000).toFixed(0) + 'k'; }
+              },
+              grid: { color: 'rgba(0,0,0,0.05)' }
+            }
+          }
+        }
+      });
+    } catch (e) {
+      console.error('Forecast chart error:', e);
+    }
+  }
+
+  // ── Tag No-Show / Cancelled Bar Chart ──
+  let tagChartInstance = null;
+  async function loadTagChart() {
+    try {
+      const latest = await supaFetch('tag_conversion_analytics',
+        'location_slug=eq.troy&order=snapshot_date.desc&limit=1');
+      if (!latest || latest.length === 0) return;
+      const snapDate = latest[0].snapshot_date;
+
+      const rows = await supaFetch('tag_conversion_analytics',
+        'location_slug=eq.troy&snapshot_date=eq.' + snapDate + '&order=no_show_count.desc&limit=10');
+      if (!rows || rows.length === 0) return;
+
+      const labels = rows.map(r => r.tag || '--');
+      const noShows = rows.map(r => Number(r.no_show_count || 0));
+      const cancelled = rows.map(r => Number(r.cancelled_count || 0));
+
+      document.getElementById('tag-chart-wrap').style.display = '';
+      const ctx = document.getElementById('tag-noshow-chart').getContext('2d');
+
+      if (tagChartInstance) tagChartInstance.destroy();
+      tagChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'No-Show',
+              data: noShows,
+              backgroundColor: 'rgba(204,0,0,0.8)',
+              borderRadius: 3
+            },
+            {
+              label: 'Cancelled',
+              data: cancelled,
+              backgroundColor: 'rgba(217,119,6,0.8)',
+              borderRadius: 3
+            }
+          ]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#6b7a99', font: { family: 'Inter', size: 12 } }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 },
+              grid: { color: 'rgba(0,0,0,0.05)' }
+            },
+            y: {
+              stacked: true,
+              ticks: { color: '#6b7a99', font: { size: 11 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    } catch (e) {
+      console.error('Tag chart error:', e);
+    }
+  }
+
   // Load SEO data when dashboard loads (add to the existing flow)
   const origLoadDashboard = loadDashboard;
   loadDashboard = async function(period) {
@@ -1917,6 +2085,8 @@
     loadRetentionTracker();
     loadForecast();
     loadTagAnalytics();
+    loadForecastChart();
+    loadTagChart();
   };
 </script>
 </body>
