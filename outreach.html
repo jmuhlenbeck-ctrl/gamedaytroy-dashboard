@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Local Outreach — Gameday Men's Health</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a1a2e; --primary-light: #2a2a4a;
+      --accent: #cc0000; --accent-hover: #a80000;
+      --bg: #f4f5f7; --card: #ffffff; --text: #1a1a2e;
+      --text-muted: #6b7a99; --text-dim: #9ca3af;
+      --border: rgba(0,0,0,0.08);
+      --success: #16a34a; --warning: #d97706; --danger: #cc0000;
+      --blue: #2563eb; --purple: #7c3aed; --teal: #0d9488;
+      --orange: #ea580c;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.1);
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+
+    .quick-links-bar {
+      background: var(--primary); padding: 8px 20px; display: flex; gap: 4px;
+      align-items: center; position: sticky; top: 0; z-index: 100;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .quick-link {
+      display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      color: rgba(255,255,255,0.7); text-decoration: none; white-space: nowrap; transition: all 0.15s;
+    }
+    .quick-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .quick-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+
+    .pin-overlay {
+      position: fixed; inset: 0; background: #fff; z-index: 9999;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+    }
+    .pin-overlay.hidden { display: none; }
+    .pin-overlay h2 { font-size: 1.5rem; margin-bottom: 8px; color: var(--primary); }
+    .pin-overlay p { color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; }
+    .pin-input {
+      width: 200px; padding: 14px; font-size: 2rem; text-align: center;
+      border: 2px solid var(--border); border-radius: var(--radius);
+      letter-spacing: 12px; font-family: inherit; outline: none;
+    }
+    .pin-input:focus { border-color: var(--accent); }
+    .pin-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none; }
+
+    .header {
+      background: var(--primary); padding: 20px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-left h1 { color: #fff; font-size: 1.25rem; font-weight: 700; }
+    .header-left p { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-top: 2px; }
+    .header-right { display: flex; gap: 10px; align-items: center; }
+    .refresh-btn {
+      background: rgba(255,255,255,0.12); border: none; border-radius: 8px; padding: 8px;
+      cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    }
+    .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+
+    .main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    .section-title {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--text-muted); margin: 24px 0 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-title:first-child { margin-top: 0; }
+    .section-title .sub { font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 0.75rem; color: var(--text-dim); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .kpi-card {
+      background: var(--card); border-radius: var(--radius); padding: 16px 18px;
+      box-shadow: var(--shadow); border-left: 4px solid var(--border); transition: transform 0.15s;
+    }
+    .kpi-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+    .kpi-card.green { border-left-color: var(--success); }
+    .kpi-card.blue { border-left-color: var(--blue); }
+    .kpi-card.purple { border-left-color: var(--purple); }
+    .kpi-card.teal { border-left-color: var(--teal); }
+    .kpi-card.orange { border-left-color: var(--orange); }
+    .kpi-card.red { border-left-color: var(--danger); }
+    .kpi-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+    .kpi-value { font-size: 1.6rem; font-weight: 800; margin-top: 4px; }
+    .kpi-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* PIPELINE FUNNEL */
+    .funnel { display: flex; gap: 2px; margin: 12px 0 24px; border-radius: var(--radius); overflow: hidden; height: 32px; }
+    .funnel-seg { display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.72rem; font-weight: 700; transition: flex 0.5s; min-width: 30px; }
+    .funnel-seg.raw { background: var(--blue); }
+    .funnel-seg.qualified { background: var(--purple); }
+    .funnel-seg.contacted { background: var(--orange); }
+    .funnel-seg.replied { background: var(--success); }
+
+    /* TABS */
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab-btn {
+      padding: 8px 18px; border-radius: 8px; border: none; font-family: inherit;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+      background: var(--card); color: var(--text-muted); box-shadow: var(--shadow);
+    }
+    .tab-btn.active { background: var(--primary); color: #fff; }
+    .tab-btn .badge {
+      display: inline-block; background: var(--accent); color: #fff; font-size: 0.68rem;
+      padding: 1px 7px; border-radius: 10px; margin-left: 6px; font-weight: 700;
+    }
+    .tab-btn.active .badge { background: rgba(255,255,255,0.3); }
+
+    /* TABLE */
+    .data-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .data-table th {
+      text-align: left; padding: 12px 14px; background: #f8f9fb;
+      color: var(--text-muted); font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border);
+    }
+    .data-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: #f8f9fb; }
+
+    .status-pill {
+      display: inline-block; padding: 2px 10px; border-radius: 6px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    .status-pill.pending { background: #fef3c7; color: #b45309; }
+    .status-pill.approved { background: #d1fae5; color: var(--success); }
+    .status-pill.rejected { background: #fee2e2; color: var(--danger); }
+    .status-pill.sent { background: #dbeafe; color: var(--blue); }
+    .status-pill.new { background: #eef2ff; color: var(--blue); }
+    .status-pill.enriched { background: #ede9fe; color: var(--purple); }
+    .status-pill.qualified { background: #d1fae5; color: var(--success); }
+    .status-pill.contacted { background: #ffedd5; color: var(--orange); }
+    .status-pill.replied { background: #d1fae5; color: var(--success); }
+
+    .cat-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: 0.7rem; font-weight: 600; background: #f1f5f9; color: var(--text-muted);
+    }
+
+    /* APPROVAL CARD */
+    .approval-card {
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 20px; margin-bottom: 12px; border-left: 4px solid var(--warning);
+    }
+    .approval-card.done { border-left-color: var(--success); opacity: 0.6; }
+    .approval-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .approval-biz { font-weight: 700; font-size: 0.95rem; }
+    .approval-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+    .approval-subject { font-weight: 600; font-size: 0.88rem; margin-bottom: 8px; color: var(--primary); }
+    .approval-body {
+      background: #f8f9fb; padding: 14px; border-radius: 8px; font-size: 0.84rem;
+      line-height: 1.7; color: #374151; white-space: pre-wrap; margin-bottom: 12px;
+      max-height: 200px; overflow-y: auto;
+    }
+    .approval-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      padding: 8px 20px; border-radius: 8px; border: none; font-family: inherit;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-approve { background: var(--success); color: #fff; }
+    .btn-approve:hover { background: #15803d; }
+    .btn-reject { background: #fee2e2; color: var(--danger); }
+    .btn-reject:hover { background: #fecaca; }
+    .btn-edit { background: #f1f5f9; color: var(--text-muted); }
+    .btn-edit:hover { background: #e2e8f0; }
+
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 0.9rem;
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .empty-state h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 8px; }
+
+    .sync-info { font-size: 0.75rem; color: var(--text-dim); margin-top: 20px; text-align: center; }
+
+    @media (max-width: 768px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .data-table th.hide-sm, .data-table td.hide-sm { display: none; }
+      .approval-actions { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <!-- PIN -->
+  <div class="pin-overlay" id="pinOverlay">
+    <h2>Local Outreach</h2>
+    <p>Enter PIN to access</p>
+    <input type="password" class="pin-input" id="pinInput" maxlength="4" inputmode="numeric" autofocus>
+    <div class="pin-error" id="pinError">Incorrect PIN</div>
+  </div>
+
+  <!-- NAV -->
+  <nav class="quick-links-bar">
+    <a href="index.html" class="quick-link">Dashboard</a>
+    <a href="https://tasks.alphaclinicai.com" class="quick-link" target="_blank">Tasks</a>
+    <a href="https://n8n.alphaclinicai.com/form/campaign-manager" class="quick-link" target="_blank">Campaigns</a>
+    <a href="marketing.html" class="quick-link">Marketing</a>
+    <a href="outreach.html" class="quick-link active">Outreach</a>
+    <a href="health-scores.html" class="quick-link">Health Scores</a>
+    <a href="lobbie-sync.html" class="quick-link">Lobbie Sync</a>
+  </nav>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <h1>Local Business Outreach</h1>
+      <p>B2B outreach pipeline — scrape, qualify, draft, approve, send</p>
+    </div>
+    <div class="header-right">
+      <button class="refresh-btn" onclick="loadAll()" title="Refresh">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v5h5M17 14v-5h-5"/><path d="M3.5 13A7 7 0 0114.3 4.5L17 9M14.5 5A7 7 0 003.7 13.5L1 9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main" id="mainContent" style="display:none;">
+    <!-- KPIs -->
+    <div class="section-title"><span>Pipeline Overview</span></div>
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-label">Raw Leads</div>
+        <div class="kpi-value" id="kpiRaw">--</div>
+        <div class="kpi-sub" id="kpiRawSub">scraped from Google</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-label">Qualified</div>
+        <div class="kpi-value" id="kpiQualified">--</div>
+        <div class="kpi-sub">ready for outreach</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-label">Emails Sent</div>
+        <div class="kpi-value" id="kpiSent">--</div>
+        <div class="kpi-sub" id="kpiSentSub">total sent</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Replies</div>
+        <div class="kpi-value" id="kpiReplied">--</div>
+        <div class="kpi-sub" id="kpiRepliedSub">response rate</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Pending Approval</div>
+        <div class="kpi-value" id="kpiPending">--</div>
+        <div class="kpi-sub">drafts awaiting review</div>
+      </div>
+    </div>
+
+    <!-- FUNNEL -->
+    <div class="funnel" id="funnel">
+      <div class="funnel-seg raw" id="funnelRaw" style="flex:1;">Raw</div>
+      <div class="funnel-seg qualified" id="funnelQualified" style="flex:0;">Qualified</div>
+      <div class="funnel-seg contacted" id="funnelContacted" style="flex:0;">Contacted</div>
+      <div class="funnel-seg replied" id="funnelReplied" style="flex:0;">Replied</div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="pending" onclick="showTab('pending')">
+        Pending Approval <span class="badge" id="pendingBadge">0</span>
+      </button>
+      <button class="tab-btn" data-tab="leads" onclick="showTab('leads')">Lead Pipeline</button>
+      <button class="tab-btn" data-tab="sent" onclick="showTab('sent')">Sent Log</button>
+      <button class="tab-btn" data-tab="categories" onclick="showTab('categories')">By Category</button>
+    </div>
+
+    <!-- PENDING APPROVAL TAB -->
+    <div class="tab-content" id="tab-pending">
+      <div id="pendingList"></div>
+    </div>
+
+    <!-- LEADS TAB -->
+    <div class="tab-content" id="tab-leads" style="display:none;">
+      <div class="data-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Business</th>
+              <th>Category</th>
+              <th class="hide-sm">Phone</th>
+              <th class="hide-sm">Rating</th>
+              <th>Status</th>
+              <th class="hide-sm">Step</th>
+            </tr>
+          </thead>
+          <tbody id="leadsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SENT LOG TAB -->
+    <div class="tab-content" id="tab-sent" style="display:none;">
+      <div class="data-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Sent</th>
+              <th>Business</th>
+              <th>Step</th>
+              <th class="hide-sm">Subject</th>
+            </tr>
+          </thead>
+          <tbody id="sentBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CATEGORIES TAB -->
+    <div class="tab-content" id="tab-categories" style="display:none;">
+      <div class="data-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Leads</th>
+              <th>Contacted</th>
+              <th>Replied</th>
+              <th>Rate</th>
+            </tr>
+          </thead>
+          <tbody id="catBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sync-info">
+      Data from Google Sheets. Lead scraper runs weekly Monday 7am. Drafter runs daily.
+      <br><a href="https://docs.google.com/spreadsheets/d/1ilsDk8McHFbDbu1kgGkXOWHQI-h7PeVVU1rfe_fBhCg/edit" target="_blank" style="color:var(--blue);">Open Sheet</a>
+    </div>
+  </div>
+
+<script>
+  const PIN = '1234';
+  const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw';
+  const SHEETS_ID = '1ilsDk8McHFbDbu1kgGkXOWHQI-h7PeVVU1rfe_fBhCg';
+  const SHEETS_KEY = 'AIzaSyAQGZE-mDUNkzLi8rNq5wWH9PhOicpd0e4';
+
+  let rawLeads = [], outreachLeads = [], pendingItems = [], sentItems = [];
+
+  // PIN
+  document.getElementById('pinInput').addEventListener('input', function() {
+    if (this.value.length === 4) {
+      if (this.value === PIN) {
+        document.getElementById('pinOverlay').classList.add('hidden');
+        document.getElementById('mainContent').style.display = '';
+        loadAll();
+      } else {
+        document.getElementById('pinError').style.display = '';
+        this.value = '';
+      }
+    }
+  });
+
+  async function readSheet(tab, range) {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${encodeURIComponent(tab)}${range ? '!' + range : ''}?key=${SHEETS_KEY}`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.values || data.values.length < 2) return [];
+      const headers = data.values[0];
+      return data.values.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] || '');
+        return obj;
+      });
+    } catch (e) {
+      console.error('Sheet read error:', tab, e);
+      return [];
+    }
+  }
+
+  async function loadAll() {
+    const [raw, outreach, pending, sent] = await Promise.all([
+      readSheet('Outreach Raw Leads'),
+      readSheet('Local Business Outreach'),
+      readSheet('Pending Approval'),
+      readSheet('Outreach Sent Log')
+    ]);
+
+    rawLeads = raw.filter(r => r.business_name && r.business_name !== '__HEADER_PLACEHOLDER__');
+    outreachLeads = outreach.filter(r => r.business_name && r.business_name !== '__SETUP__');
+    pendingItems = pending.filter(r => r.business_name && r.drafted_at !== '__SETUP__');
+    sentItems = sent.filter(r => r.business_name && r.sent_at !== '__SETUP__');
+
+    updateKPIs();
+    updateFunnel();
+    renderPending();
+    renderLeads();
+    renderSent();
+    renderCategories();
+  }
+
+  function updateKPIs() {
+    const rawCount = rawLeads.length;
+    const qualifiedCount = outreachLeads.filter(r => r.status === 'qualified' || r.status === 'contacted' || r.status === 'replied').length;
+    const sentCount = sentItems.length;
+    const repliedCount = outreachLeads.filter(r => r.status === 'replied').length;
+    const pendingCount = pendingItems.filter(r => r.status === 'pending').length;
+
+    document.getElementById('kpiRaw').textContent = rawCount;
+    document.getElementById('kpiRawSub').textContent = `${new Set(rawLeads.map(r => r.source)).size} categories`;
+    document.getElementById('kpiQualified').textContent = qualifiedCount || outreachLeads.length;
+    document.getElementById('kpiSent').textContent = sentCount;
+    document.getElementById('kpiSentSub').textContent = sentCount > 0 ? `across ${new Set(sentItems.map(s => s.business_name)).size} businesses` : 'none yet';
+    document.getElementById('kpiReplied').textContent = repliedCount;
+    document.getElementById('kpiRepliedSub').textContent = sentCount > 0 ? `${Math.round(repliedCount / sentCount * 100)}% response rate` : 'no emails sent yet';
+    document.getElementById('kpiPending').textContent = pendingCount;
+    document.getElementById('pendingBadge').textContent = pendingCount;
+  }
+
+  function updateFunnel() {
+    const total = rawLeads.length || 1;
+    const qualified = outreachLeads.length;
+    const contacted = outreachLeads.filter(r => r.status === 'contacted' || r.status === 'replied').length;
+    const replied = outreachLeads.filter(r => r.status === 'replied').length;
+
+    document.getElementById('funnelRaw').style.flex = total;
+    document.getElementById('funnelRaw').textContent = `Raw: ${rawLeads.length}`;
+    document.getElementById('funnelQualified').style.flex = qualified || 0;
+    document.getElementById('funnelQualified').textContent = qualified ? `Qualified: ${qualified}` : '';
+    document.getElementById('funnelContacted').style.flex = contacted || 0;
+    document.getElementById('funnelContacted').textContent = contacted ? `Contacted: ${contacted}` : '';
+    document.getElementById('funnelReplied').style.flex = replied || 0;
+    document.getElementById('funnelReplied').textContent = replied ? `Replied: ${replied}` : '';
+  }
+
+  function renderPending() {
+    const container = document.getElementById('pendingList');
+    const items = pendingItems.filter(r => r.status === 'pending');
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="empty-state"><h3>No drafts pending</h3><p>When Agent 14.4a drafts outreach emails, they'll appear here for your review. You can approve or reject each one.</p></div>`;
+      return;
+    }
+
+    container.innerHTML = items.map((item, i) => `
+      <div class="approval-card" id="approval-${i}">
+        <div class="approval-header">
+          <div>
+            <div class="approval-biz">${esc(item.business_name)}</div>
+            <div class="approval-meta">
+              <span class="cat-pill">${esc(item.category)}</span>
+              ${item.email ? ' &mdash; ' + esc(item.email) : ''}
+              &mdash; Step ${esc(item.sequence_step)} &mdash; Drafted ${esc(item.drafted_at)}
+            </div>
+          </div>
+          <span class="status-pill pending">Pending</span>
+        </div>
+        <div class="approval-subject">${esc(item.subject)}</div>
+        <div class="approval-body">${esc(item.body)}</div>
+        <div class="approval-actions">
+          <button class="btn btn-approve" onclick="setApproval(${i}, 'approved')">Approve</button>
+          <button class="btn btn-reject" onclick="setApproval(${i}, 'rejected')">Reject</button>
+          <a href="https://docs.google.com/spreadsheets/d/${SHEETS_ID}/edit" target="_blank" class="btn btn-edit">Edit in Sheet</a>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function setApproval(idx, status) {
+    const items = pendingItems.filter(r => r.status === 'pending');
+    const item = items[idx];
+    if (!item) return;
+
+    // Find the row number in the sheet (header is row 1, data starts row 2)
+    const allPending = pendingItems;
+    const rowIdx = allPending.indexOf(item);
+    const sheetRow = rowIdx + 2; // +1 for header, +1 for 1-based
+
+    // Update status column (column I = index 9) in Pending Approval sheet
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${encodeURIComponent('Pending Approval')}!I${sheetRow}?valueInputOption=RAW&key=${SHEETS_KEY}`;
+
+    try {
+      // Note: Google Sheets API write requires OAuth, not just API key
+      // For now, mark it visually and direct user to sheet
+      const card = document.getElementById(`approval-${idx}`);
+      card.classList.add('done');
+      card.querySelector('.status-pill').className = `status-pill ${status}`;
+      card.querySelector('.status-pill').textContent = status === 'approved' ? 'Approved' : 'Rejected';
+      card.querySelector('.approval-actions').innerHTML = `
+        <span style="color:var(--text-muted); font-size:0.82rem;">
+          Marked as ${status}. <a href="https://docs.google.com/spreadsheets/d/${SHEETS_ID}/edit" target="_blank" style="color:var(--blue);">
+          Update in Sheet</a> to confirm (change status column to "${status}").
+        </span>`;
+
+      // Update local state
+      item.status = status;
+      updateKPIs();
+    } catch (e) {
+      alert('Error updating status. Please update directly in Google Sheets.');
+    }
+  }
+
+  function renderLeads() {
+    const body = document.getElementById('leadsBody');
+    // Show outreach leads first, then top raw leads
+    const leads = outreachLeads.length > 0 ? outreachLeads : rawLeads.slice(0, 50);
+    const isRaw = outreachLeads.length === 0;
+
+    if (leads.length === 0) {
+      body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px;">No leads yet. Agent 14.1 runs Monday 7am.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = leads.slice(0, 100).map(r => {
+      const status = isRaw ? (r.enrich_status || 'pending') : (r.status || 'new');
+      return `<tr>
+        <td><strong>${esc(r.business_name)}</strong></td>
+        <td><span class="cat-pill">${esc(r.category ? r.category.split(',')[0].trim() : '')}</span></td>
+        <td class="hide-sm">${esc(r.phone || '--')}</td>
+        <td class="hide-sm">${r.rating ? r.rating + ' (' + (r.user_ratings_total || 0) + ')' : '--'}</td>
+        <td><span class="status-pill ${status}">${status}</span></td>
+        <td class="hide-sm">${esc(r.sequence_step || '--')}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderSent() {
+    const body = document.getElementById('sentBody');
+    if (sentItems.length === 0) {
+      body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:40px;">No emails sent yet.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = sentItems.slice().reverse().slice(0, 50).map(r => `<tr>
+      <td>${esc(r.sent_at)}</td>
+      <td><strong>${esc(r.business_name)}</strong></td>
+      <td><span class="status-pill sent">Step ${esc(r.step)}</span></td>
+      <td class="hide-sm">${esc(r.subject)}</td>
+    </tr>`).join('');
+  }
+
+  function renderCategories() {
+    const body = document.getElementById('catBody');
+    const cats = {};
+    for (const r of rawLeads) {
+      const src = (r.source || '').replace('Google Places (', '').replace(')', '') || 'unknown';
+      if (!cats[src]) cats[src] = { leads: 0, contacted: 0, replied: 0 };
+      cats[src].leads++;
+    }
+    for (const r of outreachLeads) {
+      const cat = r.category || 'unknown';
+      if (!cats[cat]) cats[cat] = { leads: 0, contacted: 0, replied: 0 };
+      if (r.status === 'contacted' || r.status === 'replied') cats[cat].contacted++;
+      if (r.status === 'replied') cats[cat].replied++;
+    }
+
+    const sorted = Object.entries(cats).sort((a, b) => b[1].leads - a[1].leads);
+    body.innerHTML = sorted.map(([cat, d]) => `<tr>
+      <td><span class="cat-pill">${esc(cat)}</span></td>
+      <td>${d.leads}</td>
+      <td>${d.contacted}</td>
+      <td>${d.replied}</td>
+      <td>${d.contacted > 0 ? Math.round(d.replied / d.contacted * 100) + '%' : '--'}</td>
+    </tr>`).join('');
+  }
+
+  function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name).style.display = '';
+    document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
