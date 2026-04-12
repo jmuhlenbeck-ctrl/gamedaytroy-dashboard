@@ -519,6 +519,14 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="5" r="3"/><path d="M2 15c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 11l2 2 4-4"/></svg>
     Retention
   </a>
+  <a href="#forecast-section" class="quick-link" onclick="document.getElementById('forecast-section').scrollIntoView({behavior:'smooth'});return false;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 6 5-10"/></svg>
+    Forecast
+  </a>
+  <a href="#tag-analytics-section" class="quick-link" onclick="document.getElementById('tag-analytics-section').scrollIntoView({behavior:'smooth'});return false;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+    Tag Analytics
+  </a>
   <a href="health-scores.html" class="quick-link">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
     Health Scores
@@ -733,6 +741,70 @@
         <div class="rt-list" id="rt-glp1-list">
           <div class="rt-empty">Loading...</div>
         </div>
+      </div>
+    </div>
+
+    <!-- REVENUE FORECAST -->
+    <div id="forecast-section" style="margin-top:32px;">
+      <div class="section-title">Revenue Forecast</div>
+      <div id="forecast-empty" style="text-align:center;color:var(--text-muted);padding:30px;background:var(--card);border-radius:var(--radius);">Loading forecast data...</div>
+
+      <!-- Forecast KPIs -->
+      <div class="kpi-grid" id="forecast-kpis" style="display:none;">
+        <div class="kpi-card accent-green">
+          <div class="kpi-label">Projected Month Revenue</div>
+          <div class="kpi-value green" id="fc-projected">--</div>
+          <div class="kpi-sub" id="fc-projected-sub">--</div>
+        </div>
+        <div class="kpi-card accent-blue">
+          <div class="kpi-label">MTD Revenue</div>
+          <div class="kpi-value blue" id="fc-mtd">--</div>
+          <div class="kpi-sub" id="fc-mtd-sub">--</div>
+        </div>
+        <div class="kpi-card accent-purple">
+          <div class="kpi-label">MTD New Revenue</div>
+          <div class="kpi-value purple" id="fc-new">--</div>
+          <div class="kpi-sub" id="fc-new-pct">--</div>
+        </div>
+        <div class="kpi-card accent-teal">
+          <div class="kpi-label">MTD Recurring</div>
+          <div class="kpi-value teal" id="fc-recurring">--</div>
+          <div class="kpi-sub" id="fc-recurring-pct">--</div>
+        </div>
+      </div>
+
+      <!-- Forecast Details Card -->
+      <div class="trend-card" id="forecast-details" style="display:none;margin-top:12px;">
+        <table class="trend-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody id="forecast-details-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAG CONVERSION ANALYTICS -->
+    <div id="tag-analytics-section" style="margin-top:32px;">
+      <div class="section-title">Tag Conversion Analytics</div>
+      <div id="tag-empty" style="text-align:center;color:var(--text-muted);padding:30px;background:var(--card);border-radius:var(--radius);">Loading tag data...</div>
+
+      <div class="trend-card" id="tag-table-wrap" style="display:none;">
+        <table class="trend-table">
+          <thead>
+            <tr>
+              <th>Tag</th>
+              <th>Leads</th>
+              <th>Won</th>
+              <th>Conv %</th>
+              <th>Last Won</th>
+            </tr>
+          </thead>
+          <tbody id="tag-analytics-body"></tbody>
+        </table>
       </div>
     </div>
 
@@ -1754,12 +1826,88 @@
     loadRetentionTracker();
   }
 
+  // ── Revenue Forecast ──
+  async function loadForecast() {
+    try {
+      const rows = await supaFetch('revenue_forecast', 'location_slug=eq.troy&order=report_date.desc&limit=1');
+      if (!rows || rows.length === 0) {
+        document.getElementById('forecast-empty').textContent = 'No forecast data yet — Agent 9 writes weekly on Monday.';
+        return;
+      }
+      const f = rows[0];
+      document.getElementById('forecast-empty').style.display = 'none';
+      document.getElementById('forecast-kpis').style.display = '';
+      document.getElementById('forecast-details').style.display = '';
+
+      const fmt = n => '$' + Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+
+      document.getElementById('fc-projected').textContent = fmt(f.projected_month_revenue);
+      document.getElementById('fc-projected-sub').textContent = 'Day ' + f.days_elapsed + ' of ' + f.days_in_month;
+      document.getElementById('fc-mtd').textContent = fmt(f.mtd_revenue);
+      document.getElementById('fc-mtd-sub').textContent = fmt(f.avg_daily_revenue) + '/day avg';
+      document.getElementById('fc-new').textContent = fmt(f.mtd_new);
+      document.getElementById('fc-new-pct').textContent = (f.new_pct || 0) + '% of revenue';
+      document.getElementById('fc-recurring').textContent = fmt(f.mtd_recurring);
+      document.getElementById('fc-recurring-pct').textContent = (f.recurring_pct || 0) + '% of revenue';
+
+      const details = [];
+      details.push(['Report Date', f.report_date]);
+      details.push(['Projected New Revenue', fmt(f.projected_month_new)]);
+      details.push(['Projected Recurring', fmt(f.projected_month_recurring)]);
+      if (f.prev_month_revenue > 0) details.push(['Previous Month', fmt(f.prev_month_revenue)]);
+      if (f.mom_growth_pace !== null) details.push(['MoM Growth Pace', f.mom_growth_pace + '%']);
+      if (f.wow_growth !== null) details.push(['WoW Growth', f.wow_growth + '%']);
+      if (f.best_day_date) details.push(['Best Day', f.best_day_date + ' (' + fmt(f.best_day_revenue) + ')']);
+      if (f.worst_day_date) details.push(['Worst Day', f.worst_day_date + ' (' + fmt(f.worst_day_revenue) + ')']);
+
+      document.getElementById('forecast-details-body').innerHTML = details.map(([label, val]) =>
+        '<tr><td style="font-weight:500;">' + label + '</td><td>' + val + '</td></tr>'
+      ).join('');
+    } catch (e) {
+      document.getElementById('forecast-empty').textContent = 'Error loading forecast: ' + e.message;
+    }
+  }
+
+  // ── Tag Conversion Analytics ──
+  async function loadTagAnalytics() {
+    try {
+      // Get latest snapshot date first
+      const latest = await supaFetch('tag_conversion_analytics', 'location_slug=eq.troy&order=snapshot_date.desc&limit=1');
+      if (!latest || latest.length === 0) {
+        document.getElementById('tag-empty').textContent = 'No tag data yet — Agent 15 writes daily at 5 PM.';
+        return;
+      }
+      const snapDate = latest[0].snapshot_date;
+      const rows = await supaFetch('tag_conversion_analytics', 'location_slug=eq.troy&snapshot_date=eq.' + snapDate + '&order=won_total.desc');
+      if (!rows || rows.length === 0) return;
+
+      document.getElementById('tag-empty').style.display = 'none';
+      document.getElementById('tag-table-wrap').style.display = '';
+
+      document.getElementById('tag-analytics-body').innerHTML = rows.map(r => {
+        const pct = Number(r.conversion_pct || 0);
+        const pctColor = pct >= 50 ? 'var(--success)' : pct >= 25 ? 'var(--warning)' : 'var(--danger)';
+        return '<tr>' +
+          '<td style="font-weight:500;">' + (r.tag || '--') + '</td>' +
+          '<td>' + (r.total_leads || 0) + '</td>' +
+          '<td>' + (r.won_total || 0) + '</td>' +
+          '<td style="color:' + pctColor + ';font-weight:600;">' + pct.toFixed(1) + '%</td>' +
+          '<td style="font-size:0.8rem;color:var(--text-muted);">' + (r.last_won_date || '--') + '</td>' +
+          '</tr>';
+      }).join('');
+    } catch (e) {
+      document.getElementById('tag-empty').textContent = 'Error loading tag analytics: ' + e.message;
+    }
+  }
+
   // Load SEO data when dashboard loads (add to the existing flow)
   const origLoadDashboard = loadDashboard;
   loadDashboard = async function(period) {
     await origLoadDashboard(period);
     loadSEOData();
     loadRetentionTracker();
+    loadForecast();
+    loadTagAnalytics();
   };
 </script>
 </body>
