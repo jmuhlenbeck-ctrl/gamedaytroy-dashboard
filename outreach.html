@@ -340,8 +340,8 @@
   const PIN = '1234';
   const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw';
+  const WEBHOOK_URL = 'https://n8n.alphaclinicai.com/webhook/outreach-dashboard';
   const SHEETS_ID = '1ilsDk8McHFbDbu1kgGkXOWHQI-h7PeVVU1rfe_fBhCg';
-  const SHEETS_KEY = 'AIzaSyAQGZE-mDUNkzLi8rNq5wWH9PhOicpd0e4';
 
   let rawLeads = [], outreachLeads = [], pendingItems = [], sentItems = [];
 
@@ -359,36 +359,18 @@
     }
   });
 
-  async function readSheet(tab, range) {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${encodeURIComponent(tab)}${range ? '!' + range : ''}?key=${SHEETS_KEY}`;
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      if (!data.values || data.values.length < 2) return [];
-      const headers = data.values[0];
-      return data.values.slice(1).map(row => {
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = row[i] || '');
-        return obj;
-      });
-    } catch (e) {
-      console.error('Sheet read error:', tab, e);
-      return [];
-    }
-  }
-
   async function loadAll() {
-    const [raw, outreach, pending, sent] = await Promise.all([
-      readSheet('Outreach Raw Leads'),
-      readSheet('Local Business Outreach'),
-      readSheet('Pending Approval'),
-      readSheet('Outreach Sent Log')
-    ]);
-
-    rawLeads = raw.filter(r => r.business_name && r.business_name !== '__HEADER_PLACEHOLDER__');
-    outreachLeads = outreach.filter(r => r.business_name && r.business_name !== '__SETUP__');
-    pendingItems = pending.filter(r => r.business_name && r.drafted_at !== '__SETUP__');
-    sentItems = sent.filter(r => r.business_name && r.sent_at !== '__SETUP__');
+    try {
+      const res = await fetch(WEBHOOK_URL);
+      const data = await res.json();
+      rawLeads = data.rawLeads || [];
+      outreachLeads = data.outreach || [];
+      pendingItems = data.pending || [];
+      sentItems = data.sentLog || [];
+    } catch (e) {
+      console.error('API error:', e);
+      rawLeads = []; outreachLeads = []; pendingItems = []; sentItems = [];
+    }
 
     updateKPIs();
     updateFunnel();
