@@ -799,8 +799,10 @@
               <th>Tag</th>
               <th>Leads</th>
               <th>Won</th>
+              <th>No-Show</th>
+              <th>Cancelled</th>
               <th>Conv %</th>
-              <th>Last Won</th>
+              <th>Show Rate</th>
             </tr>
           </thead>
           <tbody id="tag-analytics-body"></tbody>
@@ -1887,12 +1889,19 @@
       document.getElementById('tag-analytics-body').innerHTML = rows.map(r => {
         const pct = Number(r.conversion_pct || 0);
         const pctColor = pct >= 50 ? 'var(--success)' : pct >= 25 ? 'var(--warning)' : 'var(--danger)';
+        const noShow = Number(r.no_show_count || 0);
+        const cancelled = Number(r.cancelled_count || 0);
+        const totalLeads = Number(r.total_leads || 0);
+        const showRate = totalLeads > 0 ? ((totalLeads - noShow - cancelled) / totalLeads * 100) : 0;
+        const showColor = showRate >= 80 ? 'var(--success)' : showRate >= 60 ? 'var(--warning)' : 'var(--danger)';
         return '<tr>' +
           '<td style="font-weight:500;">' + (r.tag || '--') + '</td>' +
-          '<td>' + (r.total_leads || 0) + '</td>' +
+          '<td>' + totalLeads + '</td>' +
           '<td>' + (r.won_total || 0) + '</td>' +
+          '<td style="color:var(--danger);font-weight:500;">' + noShow + '</td>' +
+          '<td style="color:var(--warning);font-weight:500;">' + cancelled + '</td>' +
           '<td style="color:' + pctColor + ';font-weight:600;">' + pct.toFixed(1) + '%</td>' +
-          '<td style="font-size:0.8rem;color:var(--text-muted);">' + (r.last_won_date || '--') + '</td>' +
+          '<td style="color:' + showColor + ';font-weight:600;">' + showRate.toFixed(1) + '%</td>' +
           '</tr>';
       }).join('');
     } catch (e) {
