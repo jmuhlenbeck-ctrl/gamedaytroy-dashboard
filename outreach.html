@@ -463,9 +463,9 @@
         <div class="approval-body">${esc(item.body)}</div>
         <div class="edit-fields">
           <label>Subject</label>
-          <input type="text" id="edit-subject-${i}" value="${esc(item.subject).replace(/"/g, '&quot;')}" />
+          <input type="text" id="edit-subject-${i}" />
           <label>Email Body</label>
-          <textarea id="edit-body-${i}">${esc(item.body)}</textarea>
+          <textarea id="edit-body-${i}"></textarea>
         </div>
         <div class="approval-actions" id="actions-${i}">
           <button class="btn btn-approve" onclick="setApproval(${i}, 'approved')">Approve</button>
@@ -474,6 +474,14 @@
         </div>
       </div>
     `).join('');
+
+    // Populate edit fields via JS to avoid HTML escaping issues
+    items.forEach((item, i) => {
+      const subEl = document.getElementById(`edit-subject-${i}`);
+      const bodyEl = document.getElementById(`edit-body-${i}`);
+      if (subEl) subEl.value = (item.subject || '').replace(/\\n/g, '\n');
+      if (bodyEl) bodyEl.value = (item.body || '').replace(/\\n/g, '\n');
+    });
   }
 
   const WRITE_WEBHOOK = 'https://n8n.alphaclinicai.com/webhook/write-enrichment-v2';
@@ -502,8 +510,8 @@
     card.classList.remove('editing');
     const items = pendingItems.filter(r => r.status === 'pending');
     const item = items[idx];
-    document.getElementById(`edit-subject-${idx}`).value = item.subject;
-    document.getElementById(`edit-body-${idx}`).value = item.body;
+    document.getElementById(`edit-subject-${idx}`).value = (item.subject || '').replace(/\\n/g, '\n');
+    document.getElementById(`edit-body-${idx}`).value = (item.body || '').replace(/\\n/g, '\n');
     document.getElementById(`actions-${idx}`).innerHTML = `
       <button class="btn btn-approve" onclick="setApproval(${idx}, 'approved')">Approve</button>
       <button class="btn btn-reject" onclick="setApproval(${idx}, 'rejected')">Reject</button>
