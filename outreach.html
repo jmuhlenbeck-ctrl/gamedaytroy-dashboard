@@ -161,6 +161,23 @@
       line-height: 1.7; color: #374151; white-space: pre-wrap; margin-bottom: 12px;
       max-height: 200px; overflow-y: auto;
     }
+    .approval-card.editing .approval-subject,
+    .approval-card.editing .approval-body { display: none; }
+    .edit-fields { display: none; margin-bottom: 12px; }
+    .approval-card.editing .edit-fields { display: block; }
+    .edit-fields label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px; margin-top: 10px; }
+    .edit-fields input {
+      width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border);
+      font-family: inherit; font-size: 0.88rem; font-weight: 600; color: var(--primary);
+      outline: none; transition: border-color 0.15s;
+    }
+    .edit-fields input:focus { border-color: var(--blue); }
+    .edit-fields textarea {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1.5px solid var(--border);
+      font-family: inherit; font-size: 0.84rem; line-height: 1.7; color: #374151;
+      resize: vertical; min-height: 180px; outline: none; transition: border-color 0.15s;
+    }
+    .edit-fields textarea:focus { border-color: var(--blue); }
     .approval-actions { display: flex; gap: 8px; align-items: center; }
     .btn {
       padding: 8px 20px; border-radius: 8px; border: none; font-family: inherit;
@@ -170,8 +187,14 @@
     .btn-approve:hover { background: #15803d; }
     .btn-reject { background: #fee2e2; color: var(--danger); }
     .btn-reject:hover { background: #fecaca; }
-    .btn-edit { background: #f1f5f9; color: var(--text-muted); }
-    .btn-edit:hover { background: #e2e8f0; }
+    .btn-edit { background: #e0e7ff; color: var(--blue); }
+    .btn-edit:hover { background: #c7d2fe; }
+    .btn-save { background: var(--blue); color: #fff; }
+    .btn-save:hover { background: #1d4ed8; }
+    .btn-cancel { background: #f1f5f9; color: var(--text-muted); }
+    .btn-cancel:hover { background: #e2e8f0; }
+    .saving-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 6px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .empty-state {
       text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 0.9rem;
@@ -438,13 +461,96 @@
         </div>
         <div class="approval-subject">${esc(item.subject)}</div>
         <div class="approval-body">${esc(item.body)}</div>
-        <div class="approval-actions">
+        <div class="edit-fields">
+          <label>Subject</label>
+          <input type="text" id="edit-subject-${i}" value="${esc(item.subject).replace(/"/g, '&quot;')}" />
+          <label>Email Body</label>
+          <textarea id="edit-body-${i}">${esc(item.body)}</textarea>
+        </div>
+        <div class="approval-actions" id="actions-${i}">
           <button class="btn btn-approve" onclick="setApproval(${i}, 'approved')">Approve</button>
           <button class="btn btn-reject" onclick="setApproval(${i}, 'rejected')">Reject</button>
-          <a href="https://docs.google.com/spreadsheets/d/${SHEETS_ID}/edit" target="_blank" class="btn btn-edit">Edit in Sheet</a>
+          <button class="btn btn-edit" onclick="startEdit(${i})">Edit</button>
         </div>
       </div>
     `).join('');
+  }
+
+  const WRITE_WEBHOOK = 'https://n8n.alphaclinicai.com/webhook/write-enrichment-v2';
+
+  async function writeToSheet(data) {
+    const res = await fetch(WRITE_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: { valueInputOption: 'RAW', data } })
+    });
+    return await res.json();
+  }
+
+  function startEdit(idx) {
+    const card = document.getElementById(`approval-${idx}`);
+    card.classList.add('editing');
+    document.getElementById(`actions-${idx}`).innerHTML = `
+      <button class="btn btn-save" onclick="saveEdit(${idx})">Save</button>
+      <button class="btn btn-cancel" onclick="cancelEdit(${idx})">Cancel</button>
+    `;
+    document.getElementById(`edit-subject-${idx}`).focus();
+  }
+
+  function cancelEdit(idx) {
+    const card = document.getElementById(`approval-${idx}`);
+    card.classList.remove('editing');
+    const items = pendingItems.filter(r => r.status === 'pending');
+    const item = items[idx];
+    document.getElementById(`edit-subject-${idx}`).value = item.subject;
+    document.getElementById(`edit-body-${idx}`).value = item.body;
+    document.getElementById(`actions-${idx}`).innerHTML = `
+      <button class="btn btn-approve" onclick="setApproval(${idx}, 'approved')">Approve</button>
+      <button class="btn btn-reject" onclick="setApproval(${idx}, 'rejected')">Reject</button>
+      <button class="btn btn-edit" onclick="startEdit(${idx})">Edit</button>
+    `;
+  }
+
+  async function saveEdit(idx) {
+    const items = pendingItems.filter(r => r.status === 'pending');
+    const item = items[idx];
+    if (!item) return;
+
+    const newSubject = document.getElementById(`edit-subject-${idx}`).value.trim();
+    const newBody = document.getElementById(`edit-body-${idx}`).value.trim();
+    if (!newSubject || !newBody) { alert('Subject and body cannot be empty.'); return; }
+
+    const rowIdx = pendingItems.indexOf(item);
+    const sheetRow = rowIdx + 2;
+
+    const saveBtn = document.querySelector(`#actions-${idx} .btn-save`);
+    saveBtn.innerHTML = '<span class="saving-spinner"></span>Saving...';
+    saveBtn.disabled = true;
+
+    try {
+      await writeToSheet([
+        { range: `Pending Approval!G${sheetRow}`, values: [[newSubject]] },
+        { range: `Pending Approval!H${sheetRow}`, values: [[newBody]] }
+      ]);
+
+      item.subject = newSubject;
+      item.body = newBody;
+
+      const card = document.getElementById(`approval-${idx}`);
+      card.classList.remove('editing');
+      card.querySelector('.approval-subject').textContent = newSubject;
+      card.querySelector('.approval-body').textContent = newBody;
+      document.getElementById(`actions-${idx}`).innerHTML = `
+        <button class="btn btn-approve" onclick="setApproval(${idx}, 'approved')">Approve</button>
+        <button class="btn btn-reject" onclick="setApproval(${idx}, 'rejected')">Reject</button>
+        <button class="btn btn-edit" onclick="startEdit(${idx})">Edit</button>
+        <span style="color:var(--success);font-size:0.78rem;margin-left:8px;">Saved</span>
+      `;
+    } catch (e) {
+      alert('Error saving. Please try again.');
+      saveBtn.innerHTML = 'Save';
+      saveBtn.disabled = false;
+    }
   }
 
   async function setApproval(idx, status) {
@@ -452,32 +558,34 @@
     const item = items[idx];
     if (!item) return;
 
-    // Find the row number in the sheet (header is row 1, data starts row 2)
-    const allPending = pendingItems;
-    const rowIdx = allPending.indexOf(item);
-    const sheetRow = rowIdx + 2; // +1 for header, +1 for 1-based
+    const label = status === 'approved' ? 'Approve' : 'Reject';
+    if (!confirm(`${label} outreach email to ${item.business_name}?`)) return;
 
-    // Update status column (column I = index 9) in Pending Approval sheet
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/${encodeURIComponent('Pending Approval')}!I${sheetRow}?valueInputOption=RAW&key=${SHEETS_KEY}`;
+    const rowIdx = pendingItems.indexOf(item);
+    const sheetRow = rowIdx + 2;
+
+    const card = document.getElementById(`approval-${idx}`);
+    const actionsEl = document.getElementById(`actions-${idx}`);
+    actionsEl.innerHTML = `<span style="color:var(--text-muted);font-size:0.82rem;"><span class="saving-spinner" style="border-color:rgba(0,0,0,0.15);border-top-color:var(--blue);"></span> Updating...</span>`;
 
     try {
-      // Note: Google Sheets API write requires OAuth, not just API key
-      // For now, mark it visually and direct user to sheet
-      const card = document.getElementById(`approval-${idx}`);
-      card.classList.add('done');
-      card.querySelector('.status-pill').className = `status-pill ${status}`;
-      card.querySelector('.status-pill').textContent = status === 'approved' ? 'Approved' : 'Rejected';
-      card.querySelector('.approval-actions').innerHTML = `
-        <span style="color:var(--text-muted); font-size:0.82rem;">
-          Marked as ${status}. <a href="https://docs.google.com/spreadsheets/d/${SHEETS_ID}/edit" target="_blank" style="color:var(--blue);">
-          Update in Sheet</a> to confirm (change status column to "${status}").
-        </span>`;
+      await writeToSheet([
+        { range: `Pending Approval!I${sheetRow}`, values: [[status]] }
+      ]);
 
-      // Update local state
       item.status = status;
+      card.classList.add('done');
+      card.querySelector('.status-pill').className = `status-pill ${status === 'approved' ? 'qualified' : 'rejected'}`;
+      card.querySelector('.status-pill').textContent = status === 'approved' ? 'Approved' : 'Rejected';
+      actionsEl.innerHTML = `<span style="color:${status === 'approved' ? 'var(--success)' : 'var(--danger)'};font-size:0.82rem;font-weight:600;">${status === 'approved' ? 'Approved — will send at 9 AM' : 'Rejected — will not send'}</span>`;
       updateKPIs();
     } catch (e) {
-      alert('Error updating status. Please update directly in Google Sheets.');
+      alert('Error updating status. Please try again.');
+      actionsEl.innerHTML = `
+        <button class="btn btn-approve" onclick="setApproval(${idx}, 'approved')">Approve</button>
+        <button class="btn btn-reject" onclick="setApproval(${idx}, 'rejected')">Reject</button>
+        <button class="btn btn-edit" onclick="startEdit(${idx})">Edit</button>
+      `;
     }
   }
 
