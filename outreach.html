@@ -663,7 +663,7 @@
   function esc(str) {
     if (!str) return '';
     const div = document.createElement('div');
-    div.textContent = str;
+    div.textContent = str.replace(/\\n/g, '\n');
     return div.innerHTML;
   }
 </script>
