@@ -1218,6 +1218,40 @@
       return '#9ca3af';
     }
 
+    // Build product card HTML from common fields
+    function productCardHtml({ desc, name, amt, pct, statusBadge }) {
+      const color = getProductColor(desc);
+      return `
+        <div class="product-card">
+          <div class="product-row">
+            <div class="product-info">
+              <div class="product-name">${escHtml(desc)}</div>
+              <div class="product-patient">${escHtml(name)}${statusBadge || ''}</div>
+            </div>
+            <div class="product-amount">${$d(amt)}</div>
+          </div>
+          <div class="product-bar"><div class="product-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        </div>`;
+    }
+
+    // Render helper: show first N, collapse rest behind a toggle
+    const INITIAL_PRODUCTS = 5;
+    function renderProductList(cards) {
+      if (cards.length === 0) {
+        productDiv.innerHTML = '<div class="product-empty">No new sales for this period</div>';
+        return;
+      }
+      const visible = cards.slice(0, INITIAL_PRODUCTS).join('');
+      const hidden = cards.slice(INITIAL_PRODUCTS).join('');
+      const needsToggle = cards.length > INITIAL_PRODUCTS;
+      productDiv.innerHTML =
+        visible +
+        (needsToggle
+          ? `<div id="product-hidden" style="display:none;">${hidden}</div>
+             <button id="product-toggle" onclick="toggleProductList()" style="display:block;margin:12px auto 0;padding:8px 18px;background:var(--card);border:1px solid var(--border);border-radius:999px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">Show all ${cards.length} &#x25BC;</button>`
+          : '');
+    }
+
     // Use Lobbie billing_items grouped by patient, with MXMerchant fallback
     const lobbieBilling = (billingData || []).filter(b => b.line_item_name && b.amount_cents > 0);
 
@@ -1231,53 +1265,31 @@
         byPatient[name].totalCents += parseInt(b.amount_cents || 0);
         if (b.invoice_status) byPatient[name].status = b.invoice_status;
       }
-      // Sort by total amount descending
       const sorted = Object.entries(byPatient).sort((a, b) => b[1].totalCents - a[1].totalCents);
       const maxAmt = sorted.length > 0 ? sorted[0][1].totalCents / 100 : 1;
-
-      for (const [name, data] of sorted) {
+      const cards = sorted.map(([name, data]) => {
         const amt = data.totalCents / 100;
         const pct = maxAmt > 0 ? (amt / maxAmt) * 100 : 0;
         const desc = data.items.join(', ');
-        const color = getProductColor(desc);
         const isPaid = data.status.includes('PAID');
         const statusBadge = isPaid
           ? '<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:2px 6px;border-radius:4px;margin-left:6px;">PAID</span>'
           : '<span style="font-size:10px;background:#fef3c7;color:#d97706;padding:2px 6px;border-radius:4px;margin-left:6px;">' + escHtml(data.status) + '</span>';
-        productDiv.innerHTML += `
-          <div class="product-card">
-            <div class="product-row">
-              <div class="product-info">
-                <div class="product-name">${escHtml(desc)}</div>
-                <div class="product-patient">${escHtml(name)}${statusBadge}</div>
-              </div>
-              <div class="product-amount">${$d(amt)}</div>
-            </div>
-            <div class="product-bar"><div class="product-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-          </div>`;
-      }
+        return productCardHtml({ desc, name, amt, pct, statusBadge });
+      });
+      renderProductList(cards);
     } else {
       // Fallback to MXMerchant transactions if no Lobbie billing data
       const newSales = (txnData || []).filter(t => (t.status === 'Approved' || t.status === 'Settled' || t.status === 'Paid') && t.revenue_type === 'new');
       if (newSales.length > 0) {
         const maxAmt = Math.max(...newSales.map(t => parseFloat(t.amount || 0)), 1);
-        for (const t of newSales) {
+        const cards = newSales.map(t => {
           const amt = parseFloat(t.amount || 0);
           const pct = maxAmt > 0 ? (amt / maxAmt) * 100 : 0;
           const desc = (t.product_description && t.product_description !== 'N/A') ? t.product_description : 'New Sale';
-          const color = getProductColor(desc);
-          productDiv.innerHTML += `
-            <div class="product-card">
-              <div class="product-row">
-                <div class="product-info">
-                  <div class="product-name">${escHtml(desc)}</div>
-                  <div class="product-patient">${escHtml(t.customer_name || '')}</div>
-                </div>
-                <div class="product-amount">${$d(amt)}</div>
-              </div>
-              <div class="product-bar"><div class="product-bar-fill" style="width:${pct}%;background:${color}"></div></div>
-            </div>`;
-        }
+          return productCardHtml({ desc, name: t.customer_name || '', amt, pct });
+        });
+        renderProductList(cards);
       } else {
         productDiv.innerHTML = '<div class="product-empty">No new sales for this period</div>';
       }
@@ -1415,6 +1427,18 @@
     d.textContent = str;
     return d.innerHTML;
   }
+
+  // Toggle for Revenue by Product expand/collapse
+  window.toggleProductList = function() {
+    const hidden = document.getElementById('product-hidden');
+    const btn = document.getElementById('product-toggle');
+    if (!hidden || !btn) return;
+    const isOpen = hidden.style.display === 'block';
+    hidden.style.display = isOpen ? 'none' : 'block';
+    const match = btn.textContent.match(/\d+/);
+    const total = match ? match[0] : '';
+    btn.innerHTML = isOpen ? `Show all ${total} &#x25BC;` : 'Show less &#x25B2;';
+  };
 
   // ---- GOAL EDITING ----
   let currentGoalMonth = null;
