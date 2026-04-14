@@ -696,12 +696,6 @@
           <select id="rt-add-type">
             <option value="trt">TRT</option>
             <option value="glp1">GLP-1</option>
-            <option value="peptide">Peptide</option>
-            <option value="sexual_health">Sexual Health</option>
-            <option value="hormone_support">Hormone Support</option>
-            <option value="supplement">Supplement</option>
-            <option value="labs">Labs</option>
-            <option value="other">Other</option>
           </select>
           <label>Start Date</label>
           <input type="date" id="rt-add-date">
@@ -726,10 +720,6 @@
           <div class="kpi-label">GLP-1</div>
           <div class="kpi-value purple" id="rt-kpi-glp1">-</div>
         </div>
-        <div class="kpi-card accent-teal">
-          <div class="kpi-label">Peptide</div>
-          <div class="kpi-value" id="rt-kpi-peptide">-</div>
-        </div>
         <div class="kpi-card accent-warning">
           <div class="kpi-label">Due Now</div>
           <div class="kpi-value" style="color:var(--warning)" id="rt-kpi-due">-</div>
@@ -746,12 +736,6 @@
         <button class="rt-tab" data-rttab="all">All</button>
         <button class="rt-tab" data-rttab="trt">TRT</button>
         <button class="rt-tab" data-rttab="glp1">GLP-1</button>
-        <button class="rt-tab" data-rttab="peptide">Peptide</button>
-        <button class="rt-tab" data-rttab="sexual_health">Sexual Health</button>
-        <button class="rt-tab" data-rttab="hormone_support">Hormone Support</button>
-        <button class="rt-tab" data-rttab="labs">Labs</button>
-        <button class="rt-tab" data-rttab="supplement">Supplement</button>
-        <button class="rt-tab" data-rttab="other">Other</button>
       </div>
 
       <div class="rt-tab-content active" id="rttab-due">
@@ -765,24 +749,6 @@
       </div>
       <div class="rt-tab-content" id="rttab-glp1">
         <div class="rt-list" id="rt-glp1-list"><div class="rt-empty">Loading...</div></div>
-      </div>
-      <div class="rt-tab-content" id="rttab-peptide">
-        <div class="rt-list" id="rt-peptide-list"><div class="rt-empty">Loading...</div></div>
-      </div>
-      <div class="rt-tab-content" id="rttab-sexual_health">
-        <div class="rt-list" id="rt-sexual_health-list"><div class="rt-empty">Loading...</div></div>
-      </div>
-      <div class="rt-tab-content" id="rttab-hormone_support">
-        <div class="rt-list" id="rt-hormone_support-list"><div class="rt-empty">Loading...</div></div>
-      </div>
-      <div class="rt-tab-content" id="rttab-labs">
-        <div class="rt-list" id="rt-labs-list"><div class="rt-empty">Loading...</div></div>
-      </div>
-      <div class="rt-tab-content" id="rttab-supplement">
-        <div class="rt-list" id="rt-supplement-list"><div class="rt-empty">Loading...</div></div>
-      </div>
-      <div class="rt-tab-content" id="rttab-other">
-        <div class="rt-list" id="rt-other-list"><div class="rt-empty">Loading...</div></div>
       </div>
     </div>
 
@@ -1710,25 +1676,16 @@
 
   const RT_CADENCE = {
     trt: { days: 90, label: 'Quarterly Check-in', firstDays: 14, firstLabel: 'Check-in Call' },
-    glp1: { days: 28, label: 'Monthly Check-in' },
-    peptide: { days: 30, label: 'Monthly Check-in' },
-    sexual_health: { days: 60, label: 'Follow-up' },
-    hormone_support: { days: 60, label: 'Follow-up' },
-    supplement: { days: 90, label: 'Refill Check' },
-    labs: { days: 180, label: 'Labs Review' },
-    other: { days: 90, label: 'Check-in' }
+    glp1: { days: 28, label: 'Monthly Check-in' }
   };
-  const RT_TYPE_LABELS = {
-    trt: 'TRT', glp1: 'GLP-1', peptide: 'Peptide',
-    sexual_health: 'Sexual Health', hormone_support: 'Hormone Support',
-    supplement: 'Supplement', labs: 'Labs', other: 'Other'
-  };
+  const RT_TYPE_LABELS = { trt: 'TRT', glp1: 'GLP-1' };
+  const RT_TYPES = ['trt', 'glp1'];
 
   function rtNextDue(p) {
     const today = new Date(); today.setHours(0,0,0,0);
     const start = p.start_date ? new Date(p.start_date + 'T00:00:00') : null;
     const last = p.last_touchpoint_date ? new Date(p.last_touchpoint_date + 'T00:00:00') : null;
-    const cfg = RT_CADENCE[p.service_type] || RT_CADENCE.other;
+    const cfg = RT_CADENCE[p.service_type] || RT_CADENCE.trt;
 
     if (cfg.firstDays && !last && start) {
       const d = new Date(start); d.setDate(d.getDate() + cfg.firstDays);
@@ -1773,7 +1730,7 @@
 
   async function loadRetentionTracker() {
     try {
-      const patients = await supaFetch('patient_tracker', 'location_slug=eq.troy&status=eq.active&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name&limit=5000');
+      const patients = await supaFetch('patient_tracker', 'location_slug=eq.troy&status=eq.active&service_type=in.(trt,glp1)&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name&limit=5000');
       rtPatients = (patients || []).map(p => {
         p._next = rtNextDue(p);
         p._diff = rtDaysDiff(p._next.date);
@@ -1783,14 +1740,12 @@
       // KPIs
       const trt = rtPatients.filter(p => p.service_type === 'trt');
       const glp1 = rtPatients.filter(p => p.service_type === 'glp1');
-      const peptide = rtPatients.filter(p => p.service_type === 'peptide');
       const overdue = rtPatients.filter(p => p._diff < 0);
       const dueNow = rtPatients.filter(p => p._diff <= 7);
 
       document.getElementById('rt-kpi-total').textContent = rtPatients.length;
       document.getElementById('rt-kpi-trt').textContent = trt.length;
       document.getElementById('rt-kpi-glp1').textContent = glp1.length;
-      document.getElementById('rt-kpi-peptide').textContent = peptide.length;
       document.getElementById('rt-kpi-due').textContent = dueNow.length;
       document.getElementById('rt-kpi-overdue').textContent = overdue.length;
 
@@ -1808,9 +1763,8 @@
         ? allSorted.map(p => rtRenderItem(p, p._next)).join('')
         : '<div class="rt-empty">No patients tracked yet.</div>';
 
-      // Per-type tabs
-      const types = ['trt','glp1','peptide','sexual_health','hormone_support','labs','supplement','other'];
-      types.forEach(t => {
+      // Per-type tabs (TRT + GLP-1 only)
+      RT_TYPES.forEach(t => {
         const el = document.getElementById('rt-' + t + '-list');
         if (!el) return;
         const items = rtPatients.filter(p => p.service_type === t).sort((a,b) => a._diff - b._diff);
