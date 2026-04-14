@@ -1295,13 +1295,14 @@
       }
     }
 
-    // Daily trend
+    // Daily trend — collapsed to first 5 with expand toggle
     const trendBody = document.getElementById('trend-body');
     trendBody.innerHTML = '';
-    for (const day of dailyData) {
+    const INITIAL_TREND_ROWS = 5;
+    const trendRows = dailyData.map(day => {
       const dayHours = parseFloat(day.clinician_hours || DAILY_HOURS);
       const dayPerHour = dayHours > 0 ? parseFloat(day.new_revenue || 0) / dayHours : 0;
-      trendBody.innerHTML += `
+      return `
         <tr>
           <td>${formatDate(day.date)}</td>
           <td style="font-weight:700;">${$d(parseFloat(day.total_revenue || 0))}</td>
@@ -1310,9 +1311,16 @@
           <td>${$d(dayPerHour)}</td>
           <td>${day.total_transactions || 0}</td>
         </tr>`;
-    }
-    if (dailyData.length === 0) {
+    });
+    if (trendRows.length === 0) {
       trendBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">No data for this period</td></tr>';
+    } else {
+      const visible = trendRows.slice(0, INITIAL_TREND_ROWS).join('');
+      const hidden = trendRows.slice(INITIAL_TREND_ROWS).map(r => r.replace('<tr>', '<tr class="trend-extra" style="display:none;">')).join('');
+      const toggle = trendRows.length > INITIAL_TREND_ROWS
+        ? `<tr class="trend-toggle-row"><td colspan="6" style="text-align:center;padding:10px;"><button id="trend-toggle" onclick="toggleTrendRows()" style="padding:8px 18px;background:var(--card);border:1px solid var(--border);border-radius:999px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">Show all ${trendRows.length} &#x25BC;</button></td></tr>`
+        : '';
+      trendBody.innerHTML = visible + hidden + toggle;
     }
 
     // Patient Activity - grouped by service category with real names
@@ -1437,6 +1445,27 @@
     hidden.style.display = isOpen ? 'none' : 'block';
     const match = btn.textContent.match(/\d+/);
     const total = match ? match[0] : '';
+    btn.innerHTML = isOpen ? `Show all ${total} &#x25BC;` : 'Show less &#x25B2;';
+  };
+
+  // Toggle for Daily Trend table expand/collapse
+  window.toggleTrendRows = function() {
+    const extras = document.querySelectorAll('tr.trend-extra');
+    const btn = document.getElementById('trend-toggle');
+    if (!extras.length || !btn) return;
+    const isOpen = extras[0].style.display !== 'none';
+    extras.forEach(r => { r.style.display = isOpen ? 'none' : ''; });
+    const total = extras.length + 5;
+    btn.innerHTML = isOpen ? `Show all ${total} &#x25BC;` : 'Show less &#x25B2;';
+  };
+
+  // Toggle for Retention Tracker list expand/collapse (per-tab)
+  window.toggleRtList = function(hiddenId, btnId, total) {
+    const hidden = document.getElementById(hiddenId);
+    const btn = document.getElementById(btnId);
+    if (!hidden || !btn) return;
+    const isOpen = hidden.style.display === 'block';
+    hidden.style.display = isOpen ? 'none' : 'block';
     btn.innerHTML = isOpen ? `Show all ${total} &#x25BC;` : 'Show less &#x25B2;';
   };
 
@@ -1773,28 +1802,39 @@
       document.getElementById('rt-kpi-due').textContent = dueNow.length;
       document.getElementById('rt-kpi-overdue').textContent = overdue.length;
 
+      // Render helper — collapse to first 10 with expand toggle
+      const RT_INITIAL = 10;
+      function renderRtList(el, items, emptyMsg) {
+        if (!items.length) { el.innerHTML = `<div class="rt-empty">${emptyMsg}</div>`; return; }
+        const cards = items.map(p => rtRenderItem(p, p._next));
+        const visible = cards.slice(0, RT_INITIAL).join('');
+        const hidden = cards.slice(RT_INITIAL).join('');
+        const needsToggle = cards.length > RT_INITIAL;
+        const tid = el.id + '-hidden';
+        const bid = el.id + '-btn';
+        el.innerHTML = visible +
+          (needsToggle
+            ? `<div id="${tid}" style="display:none;">${hidden}</div>
+               <button id="${bid}" onclick="toggleRtList('${tid}','${bid}',${cards.length})" style="display:block;margin:12px auto 0;padding:8px 18px;background:var(--card);border:1px solid var(--border);border-radius:999px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">Show all ${cards.length} &#x25BC;</button>`
+            : '');
+      }
+
       // Due Now tab — overdue + due within 7 days, sorted by urgency
       const dueList = document.getElementById('rt-due-list');
       const dueItems = dueNow.sort((a,b) => a._diff - b._diff);
-      dueList.innerHTML = dueItems.length
-        ? dueItems.map(p => rtRenderItem(p, p._next)).join('')
-        : '<div class="rt-empty">All caught up! No patients due this week.</div>';
+      renderRtList(dueList, dueItems, 'All caught up! No patients due this week.');
 
       // All tab
       const allList = document.getElementById('rt-all-list');
       const allSorted = rtPatients.slice().sort((a,b) => a._diff - b._diff);
-      allList.innerHTML = allSorted.length
-        ? allSorted.map(p => rtRenderItem(p, p._next)).join('')
-        : '<div class="rt-empty">No patients tracked yet.</div>';
+      renderRtList(allList, allSorted, 'No patients tracked yet.');
 
       // Per-type tabs (TRT + GLP-1 only)
       RT_TYPES.forEach(t => {
         const el = document.getElementById('rt-' + t + '-list');
         if (!el) return;
         const items = rtPatients.filter(p => p.service_type === t).sort((a,b) => a._diff - b._diff);
-        el.innerHTML = items.length
-          ? items.map(p => rtRenderItem(p, p._next)).join('')
-          : `<div class="rt-empty">No ${RT_TYPE_LABELS[t]} patients tracked yet.</div>`;
+        renderRtList(el, items, `No ${RT_TYPE_LABELS[t]} patients tracked yet.`);
       });
 
     } catch(e) {
