@@ -147,6 +147,12 @@
     .badge-ok { background: #f0fdf4; color: var(--success); }
     .badge-trt { background: #dbeafe; color: #1e40af; }
     .badge-glp1 { background: #f3e8ff; color: #6b21a8; }
+    .badge-peptide { background: #ccfbf1; color: #115e59; }
+    .badge-sexual_health { background: #fce7f3; color: #9d174d; }
+    .badge-hormone_support { background: #fef3c7; color: #92400e; }
+    .badge-supplement { background: #ecfccb; color: #3f6212; }
+    .badge-labs { background: #e0e7ff; color: #3730a3; }
+    .badge-other { background: #f1f5f9; color: #475569; }
 
     /* BUTTONS */
     .btn-done {
@@ -279,6 +285,12 @@
       <select id="addType">
         <option value="trt">TRT</option>
         <option value="glp1">GLP-1</option>
+        <option value="peptide">Peptide</option>
+        <option value="sexual_health">Sexual Health</option>
+        <option value="hormone_support">Hormone Support</option>
+        <option value="supplement">Supplement</option>
+        <option value="labs">Labs</option>
+        <option value="other">Other</option>
       </select>
       <label>Start Date</label>
       <input type="date" id="addDate">
@@ -297,13 +309,21 @@
       <button class="btn-add" onclick="openModal()">+ Add Patient</button>
     </div>
     <div class="kpi-grid">
+      <div class="kpi-card accent-green">
+        <div class="kpi-label">Total Active</div>
+        <div class="kpi-value" id="kpiTotal">-</div>
+      </div>
       <div class="kpi-card accent-blue">
-        <div class="kpi-label">Active TRT</div>
+        <div class="kpi-label">TRT</div>
         <div class="kpi-value" id="kpiTrt">-</div>
       </div>
       <div class="kpi-card accent-purple">
-        <div class="kpi-label">Active GLP-1</div>
+        <div class="kpi-label">GLP-1</div>
         <div class="kpi-value" id="kpiGlp1">-</div>
+      </div>
+      <div class="kpi-card accent-teal">
+        <div class="kpi-label">Peptide</div>
+        <div class="kpi-value" id="kpiPeptide">-</div>
       </div>
       <div class="kpi-card accent-warning">
         <div class="kpi-label">Due Now</div>
@@ -318,28 +338,48 @@
     <!-- TABS -->
     <div class="section-title" style="margin-top:24px;">Patients</div>
     <input type="text" class="search-bar" id="searchBar" placeholder="Search patients..." oninput="renderAll()">
-    <div class="tabs">
+    <div class="tabs" style="flex-wrap:wrap;">
       <button class="tab active" data-tab="due">Due Now</button>
-      <button class="tab" data-tab="trt">TRT Patients</button>
-      <button class="tab" data-tab="glp1">GLP-1 Patients</button>
+      <button class="tab" data-tab="all">All</button>
+      <button class="tab" data-tab="trt">TRT</button>
+      <button class="tab" data-tab="glp1">GLP-1</button>
+      <button class="tab" data-tab="peptide">Peptide</button>
+      <button class="tab" data-tab="sexual_health">Sexual Health</button>
+      <button class="tab" data-tab="hormone_support">Hormone Support</button>
+      <button class="tab" data-tab="labs">Labs</button>
+      <button class="tab" data-tab="supplement">Supplement</button>
+      <button class="tab" data-tab="other">Other</button>
     </div>
 
     <div class="tab-content active" id="tab-due">
-      <div class="patient-list" id="dueList">
-        <div class="empty-state">Loading...</div>
-      </div>
+      <div class="patient-list" id="dueList"><div class="empty-state">Loading...</div></div>
     </div>
-
+    <div class="tab-content" id="tab-all">
+      <div class="patient-list" id="allList"><div class="empty-state">Loading...</div></div>
+    </div>
     <div class="tab-content" id="tab-trt">
-      <div class="patient-list" id="trtList">
-        <div class="empty-state">Loading...</div>
-      </div>
+      <div class="patient-list" id="trtList"><div class="empty-state">Loading...</div></div>
     </div>
-
     <div class="tab-content" id="tab-glp1">
-      <div class="patient-list" id="glp1List">
-        <div class="empty-state">Loading...</div>
-      </div>
+      <div class="patient-list" id="glp1List"><div class="empty-state">Loading...</div></div>
+    </div>
+    <div class="tab-content" id="tab-peptide">
+      <div class="patient-list" id="peptideList"><div class="empty-state">Loading...</div></div>
+    </div>
+    <div class="tab-content" id="tab-sexual_health">
+      <div class="patient-list" id="sexual_healthList"><div class="empty-state">Loading...</div></div>
+    </div>
+    <div class="tab-content" id="tab-hormone_support">
+      <div class="patient-list" id="hormone_supportList"><div class="empty-state">Loading...</div></div>
+    </div>
+    <div class="tab-content" id="tab-labs">
+      <div class="patient-list" id="labsList"><div class="empty-state">Loading...</div></div>
+    </div>
+    <div class="tab-content" id="tab-supplement">
+      <div class="patient-list" id="supplementList"><div class="empty-state">Loading...</div></div>
+    </div>
+    <div class="tab-content" id="tab-other">
+      <div class="patient-list" id="otherList"><div class="empty-state">Loading...</div></div>
     </div>
   </div>
 
@@ -419,27 +459,35 @@
     let patients = [];
 
     // ===== DYNAMIC TOUCHPOINT CALCULATION =====
+    const CADENCE = {
+      trt: { days: 90, label: 'Quarterly Check-in', firstDays: 14, firstLabel: 'Check-in Call' },
+      glp1: { days: 28, label: 'Monthly Check-in' },
+      peptide: { days: 30, label: 'Monthly Check-in' },
+      sexual_health: { days: 60, label: 'Follow-up' },
+      hormone_support: { days: 60, label: 'Follow-up' },
+      supplement: { days: 90, label: 'Refill Check' },
+      labs: { days: 180, label: 'Labs Review' },
+      other: { days: 90, label: 'Check-in' }
+    };
+
+    const TYPE_LABELS = {
+      trt: 'TRT', glp1: 'GLP-1', peptide: 'Peptide',
+      sexual_health: 'Sexual Health', hormone_support: 'Hormone Support',
+      supplement: 'Supplement', labs: 'Labs', other: 'Other'
+    };
+
     function nextDue(p) {
       const start = p.start_date ? new Date(p.start_date + 'T00:00:00') : null;
       const last = p.last_touchpoint_date ? new Date(p.last_touchpoint_date + 'T00:00:00') : null;
+      const cfg = CADENCE[p.service_type] || CADENCE.other;
 
-      if (p.service_type === 'trt') {
-        if (!last && start) {
-          const d = new Date(start); d.setDate(d.getDate() + 14);
-          return { date: d, label: 'Check-in Call' };
-        }
-        const base = last || start || today;
-        const d = new Date(base); d.setDate(d.getDate() + 90);
-        return { date: d, label: 'Quarterly Check-in' };
+      if (cfg.firstDays && !last && start) {
+        const d = new Date(start); d.setDate(d.getDate() + cfg.firstDays);
+        return { date: d, label: cfg.firstLabel || cfg.label };
       }
-
-      if (p.service_type === 'glp1') {
-        const base = last || start || today;
-        const d = new Date(base); d.setDate(d.getDate() + 28);
-        return { date: d, label: 'Monthly Check-in' };
-      }
-
-      return { date: new Date(today), label: 'Check-in' };
+      const base = last || start || today;
+      const d = new Date(base); d.setDate(d.getDate() + cfg.days);
+      return { date: d, label: cfg.label };
     }
 
     function daysDiff(date) {
@@ -461,8 +509,9 @@
     function renderItem(p) {
       const next = p._next;
       const diff = p._diff;
-      const typeLabel = p.service_type === 'trt' ? 'TRT' : 'GLP-1';
-      const typeCls = p.service_type === 'trt' ? 'badge-trt' : 'badge-glp1';
+      const st = p.service_type || 'other';
+      const typeLabel = TYPE_LABELS[st] || st;
+      const typeCls = 'badge-' + st;
 
       return `<div class="p-item">
         <div class="p-name">${escHtml(p.patient_name)}</div>
@@ -484,16 +533,19 @@
 
     function renderAll() {
       const q = getSearch();
-      const filtered = q ? patients.filter(p => p.patient_name.toLowerCase().includes(q)) : patients;
+      const filtered = q ? patients.filter(p => (p.patient_name || '').toLowerCase().includes(q)) : patients;
 
       // KPIs (always from full list)
       const trt = patients.filter(p => p.service_type === 'trt');
       const glp1 = patients.filter(p => p.service_type === 'glp1');
+      const peptide = patients.filter(p => p.service_type === 'peptide');
       const overdue = patients.filter(p => p._diff < 0);
       const dueNow = patients.filter(p => p._diff <= 7);
 
+      document.getElementById('kpiTotal').textContent = patients.length;
       document.getElementById('kpiTrt').textContent = trt.length;
       document.getElementById('kpiGlp1').textContent = glp1.length;
+      document.getElementById('kpiPeptide').textContent = peptide.length;
       document.getElementById('kpiDue').textContent = dueNow.length;
       document.getElementById('kpiOverdue').textContent = overdue.length;
 
@@ -503,23 +555,28 @@
         ? dueItems.map(renderItem).join('')
         : '<div class="empty-state">All caught up! No patients due this week.</div>';
 
-      // TRT tab
-      const trtItems = filtered.filter(p => p.service_type === 'trt').sort((a,b) => a._diff - b._diff);
-      document.getElementById('trtList').innerHTML = trtItems.length
-        ? trtItems.map(renderItem).join('')
-        : '<div class="empty-state">No TRT patients found.</div>';
+      // All tab
+      const allItems = filtered.slice().sort((a,b) => a._diff - b._diff);
+      document.getElementById('allList').innerHTML = allItems.length
+        ? allItems.map(renderItem).join('')
+        : '<div class="empty-state">No patients found.</div>';
 
-      // GLP-1 tab
-      const glp1Items = filtered.filter(p => p.service_type === 'glp1').sort((a,b) => a._diff - b._diff);
-      document.getElementById('glp1List').innerHTML = glp1Items.length
-        ? glp1Items.map(renderItem).join('')
-        : '<div class="empty-state">No GLP-1 patients found.</div>';
+      // Per-type tabs
+      const types = ['trt','glp1','peptide','sexual_health','hormone_support','labs','supplement','other'];
+      types.forEach(t => {
+        const items = filtered.filter(p => p.service_type === t).sort((a,b) => a._diff - b._diff);
+        const el = document.getElementById(t + 'List');
+        if (!el) return;
+        el.innerHTML = items.length
+          ? items.map(renderItem).join('')
+          : `<div class="empty-state">No ${TYPE_LABELS[t]} patients found.</div>`;
+      });
     }
 
     // ===== LOAD =====
     async function loadAll() {
       try {
-        const raw = await sbGet('patient_tracker', `location_slug=eq.${LOCATION}&status=eq.active&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name`);
+        const raw = await sbGet('patient_tracker', `location_slug=eq.${LOCATION}&status=eq.active&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name&limit=5000`);
         patients = (raw || []).map(p => {
           p._next = nextDue(p);
           p._diff = daysDiff(p._next.date);

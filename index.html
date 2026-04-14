@@ -372,6 +372,12 @@
     }
     .rt-type-badge.trt { background: #dbeafe; color: #1e40af; }
     .rt-type-badge.glp1 { background: #f3e8ff; color: #6b21a8; }
+    .rt-type-badge.peptide { background: #ccfbf1; color: #115e59; }
+    .rt-type-badge.sexual_health { background: #fce7f3; color: #9d174d; }
+    .rt-type-badge.hormone_support { background: #fef3c7; color: #92400e; }
+    .rt-type-badge.supplement { background: #ecfccb; color: #3f6212; }
+    .rt-type-badge.labs { background: #e0e7ff; color: #3730a3; }
+    .rt-type-badge.other { background: #f1f5f9; color: #475569; }
     .rt-badge {
       display: inline-block; padding: 2px 8px; border-radius: 10px;
       font-size: 0.65rem; font-weight: 700; text-transform: uppercase; white-space: nowrap;
@@ -690,6 +696,12 @@
           <select id="rt-add-type">
             <option value="trt">TRT</option>
             <option value="glp1">GLP-1</option>
+            <option value="peptide">Peptide</option>
+            <option value="sexual_health">Sexual Health</option>
+            <option value="hormone_support">Hormone Support</option>
+            <option value="supplement">Supplement</option>
+            <option value="labs">Labs</option>
+            <option value="other">Other</option>
           </select>
           <label>Start Date</label>
           <input type="date" id="rt-add-date">
@@ -702,13 +714,21 @@
 
       <!-- KPI row -->
       <div class="kpi-grid">
+        <div class="kpi-card accent-green">
+          <div class="kpi-label">Total Active</div>
+          <div class="kpi-value" id="rt-kpi-total">-</div>
+        </div>
         <div class="kpi-card accent-blue">
-          <div class="kpi-label">Active TRT</div>
+          <div class="kpi-label">TRT</div>
           <div class="kpi-value blue" id="rt-kpi-trt">-</div>
         </div>
         <div class="kpi-card accent-purple">
-          <div class="kpi-label">Active GLP-1</div>
+          <div class="kpi-label">GLP-1</div>
           <div class="kpi-value purple" id="rt-kpi-glp1">-</div>
+        </div>
+        <div class="kpi-card accent-teal">
+          <div class="kpi-label">Peptide</div>
+          <div class="kpi-value" id="rt-kpi-peptide">-</div>
         </div>
         <div class="kpi-card accent-warning">
           <div class="kpi-label">Due Now</div>
@@ -721,31 +741,48 @@
       </div>
 
       <!-- Tabs -->
-      <div class="rt-tabs" style="margin-top:16px;">
+      <div class="rt-tabs" style="margin-top:16px;flex-wrap:wrap;">
         <button class="rt-tab active" data-rttab="due">Due Now</button>
-        <button class="rt-tab" data-rttab="trt">TRT Patients</button>
-        <button class="rt-tab" data-rttab="glp1">GLP-1 Patients</button>
+        <button class="rt-tab" data-rttab="all">All</button>
+        <button class="rt-tab" data-rttab="trt">TRT</button>
+        <button class="rt-tab" data-rttab="glp1">GLP-1</button>
+        <button class="rt-tab" data-rttab="peptide">Peptide</button>
+        <button class="rt-tab" data-rttab="sexual_health">Sexual Health</button>
+        <button class="rt-tab" data-rttab="hormone_support">Hormone Support</button>
+        <button class="rt-tab" data-rttab="labs">Labs</button>
+        <button class="rt-tab" data-rttab="supplement">Supplement</button>
+        <button class="rt-tab" data-rttab="other">Other</button>
       </div>
 
-      <!-- Due Now Tab -->
       <div class="rt-tab-content active" id="rttab-due">
-        <div class="rt-list" id="rt-due-list">
-          <div class="rt-empty">Loading retention data...</div>
-        </div>
+        <div class="rt-list" id="rt-due-list"><div class="rt-empty">Loading retention data...</div></div>
       </div>
-
-      <!-- TRT Tab -->
+      <div class="rt-tab-content" id="rttab-all">
+        <div class="rt-list" id="rt-all-list"><div class="rt-empty">Loading...</div></div>
+      </div>
       <div class="rt-tab-content" id="rttab-trt">
-        <div class="rt-list" id="rt-trt-list">
-          <div class="rt-empty">Loading...</div>
-        </div>
+        <div class="rt-list" id="rt-trt-list"><div class="rt-empty">Loading...</div></div>
       </div>
-
-      <!-- GLP-1 Tab -->
       <div class="rt-tab-content" id="rttab-glp1">
-        <div class="rt-list" id="rt-glp1-list">
-          <div class="rt-empty">Loading...</div>
-        </div>
+        <div class="rt-list" id="rt-glp1-list"><div class="rt-empty">Loading...</div></div>
+      </div>
+      <div class="rt-tab-content" id="rttab-peptide">
+        <div class="rt-list" id="rt-peptide-list"><div class="rt-empty">Loading...</div></div>
+      </div>
+      <div class="rt-tab-content" id="rttab-sexual_health">
+        <div class="rt-list" id="rt-sexual_health-list"><div class="rt-empty">Loading...</div></div>
+      </div>
+      <div class="rt-tab-content" id="rttab-hormone_support">
+        <div class="rt-list" id="rt-hormone_support-list"><div class="rt-empty">Loading...</div></div>
+      </div>
+      <div class="rt-tab-content" id="rttab-labs">
+        <div class="rt-list" id="rt-labs-list"><div class="rt-empty">Loading...</div></div>
+      </div>
+      <div class="rt-tab-content" id="rttab-supplement">
+        <div class="rt-list" id="rt-supplement-list"><div class="rt-empty">Loading...</div></div>
+      </div>
+      <div class="rt-tab-content" id="rttab-other">
+        <div class="rt-list" id="rt-other-list"><div class="rt-empty">Loading...</div></div>
       </div>
     </div>
 
@@ -778,10 +815,12 @@
         </div>
       </div>
 
-      <!-- Revenue Trend Chart -->
-      <div class="trend-card" id="forecast-chart-wrap" style="display:none;margin-top:12px;padding:16px;">
-        <div style="font-weight:600;margin-bottom:8px;color:var(--text);">Revenue Trend (Last 30 Days)</div>
-        <canvas id="revenue-trend-chart" height="220"></canvas>
+      <!-- Revenue Trend Chart (compact) -->
+      <div class="trend-card" id="forecast-chart-wrap" style="display:none;margin-top:12px;padding:10px 12px;max-width:380px;">
+        <div style="font-weight:600;margin-bottom:4px;color:var(--text);font-size:12px;">Revenue Trend (30d)</div>
+        <div style="position:relative;height:90px;width:100%;">
+          <canvas id="revenue-trend-chart"></canvas>
+        </div>
       </div>
 
       <!-- Forecast Details Card -->
@@ -1667,31 +1706,35 @@
   // ============ RETENTION TRACKER (Dynamic Touchpoints) ============
   let rtPatients = [];
 
+  const RT_CADENCE = {
+    trt: { days: 90, label: 'Quarterly Check-in', firstDays: 14, firstLabel: 'Check-in Call' },
+    glp1: { days: 28, label: 'Monthly Check-in' },
+    peptide: { days: 30, label: 'Monthly Check-in' },
+    sexual_health: { days: 60, label: 'Follow-up' },
+    hormone_support: { days: 60, label: 'Follow-up' },
+    supplement: { days: 90, label: 'Refill Check' },
+    labs: { days: 180, label: 'Labs Review' },
+    other: { days: 90, label: 'Check-in' }
+  };
+  const RT_TYPE_LABELS = {
+    trt: 'TRT', glp1: 'GLP-1', peptide: 'Peptide',
+    sexual_health: 'Sexual Health', hormone_support: 'Hormone Support',
+    supplement: 'Supplement', labs: 'Labs', other: 'Other'
+  };
+
   function rtNextDue(p) {
     const today = new Date(); today.setHours(0,0,0,0);
     const start = p.start_date ? new Date(p.start_date + 'T00:00:00') : null;
     const last = p.last_touchpoint_date ? new Date(p.last_touchpoint_date + 'T00:00:00') : null;
+    const cfg = RT_CADENCE[p.service_type] || RT_CADENCE.other;
 
-    if (p.service_type === 'trt') {
-      if (!last && start) {
-        // First touchpoint: check-in call at 14 days
-        const d = new Date(start); d.setDate(d.getDate() + 14);
-        return { date: d, label: 'Check-in Call' };
-      }
-      // After first: every 90 days from last touchpoint
-      const base = last || start || today;
-      const d = new Date(base); d.setDate(d.getDate() + 90);
-      return { date: d, label: 'Quarterly Check-in' };
+    if (cfg.firstDays && !last && start) {
+      const d = new Date(start); d.setDate(d.getDate() + cfg.firstDays);
+      return { date: d, label: cfg.firstLabel || cfg.label };
     }
-
-    if (p.service_type === 'glp1') {
-      // Every 28 days from last touchpoint or start
-      const base = last || start || today;
-      const d = new Date(base); d.setDate(d.getDate() + 28);
-      return { date: d, label: 'Monthly Check-in' };
-    }
-
-    return { date: today, label: 'Check-in' };
+    const base = last || start || today;
+    const d = new Date(base); d.setDate(d.getDate() + cfg.days);
+    return { date: d, label: cfg.label };
   }
 
   function rtDaysDiff(date) {
@@ -1708,13 +1751,14 @@
 
   function rtRenderItem(p, next) {
     const diff = rtDaysDiff(next.date);
-    const typeLabel = p.service_type === 'trt' ? 'TRT' : 'GLP-1';
+    const st = p.service_type || 'other';
+    const typeLabel = RT_TYPE_LABELS[st] || st;
     const dueDateStr = next.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
     return `<div class="rt-item">
       <div class="rt-name">${escHtml(p.patient_name)}</div>
       <div class="rt-meta">
-        <span class="rt-type-badge ${p.service_type}">${typeLabel}</span>
+        <span class="rt-type-badge ${st}">${typeLabel}</span>
         ${next.label} &middot; ${dueDateStr}
         ${rtBadge(diff)}
       </div>
@@ -1727,7 +1771,7 @@
 
   async function loadRetentionTracker() {
     try {
-      const patients = await supaFetch('patient_tracker', 'location_slug=eq.troy&status=eq.active&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name');
+      const patients = await supaFetch('patient_tracker', 'location_slug=eq.troy&status=eq.active&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name&limit=5000');
       rtPatients = (patients || []).map(p => {
         p._next = rtNextDue(p);
         p._diff = rtDaysDiff(p._next.date);
@@ -1737,40 +1781,41 @@
       // KPIs
       const trt = rtPatients.filter(p => p.service_type === 'trt');
       const glp1 = rtPatients.filter(p => p.service_type === 'glp1');
+      const peptide = rtPatients.filter(p => p.service_type === 'peptide');
       const overdue = rtPatients.filter(p => p._diff < 0);
       const dueNow = rtPatients.filter(p => p._diff <= 7);
 
+      document.getElementById('rt-kpi-total').textContent = rtPatients.length;
       document.getElementById('rt-kpi-trt').textContent = trt.length;
       document.getElementById('rt-kpi-glp1').textContent = glp1.length;
+      document.getElementById('rt-kpi-peptide').textContent = peptide.length;
       document.getElementById('rt-kpi-due').textContent = dueNow.length;
       document.getElementById('rt-kpi-overdue').textContent = overdue.length;
 
       // Due Now tab — overdue + due within 7 days, sorted by urgency
       const dueList = document.getElementById('rt-due-list');
       const dueItems = dueNow.sort((a,b) => a._diff - b._diff);
-      if (dueItems.length === 0) {
-        dueList.innerHTML = '<div class="rt-empty">All caught up! No patients due this week.</div>';
-      } else {
-        dueList.innerHTML = dueItems.map(p => rtRenderItem(p, p._next)).join('');
-      }
+      dueList.innerHTML = dueItems.length
+        ? dueItems.map(p => rtRenderItem(p, p._next)).join('')
+        : '<div class="rt-empty">All caught up! No patients due this week.</div>';
 
-      // TRT tab
-      const trtList = document.getElementById('rt-trt-list');
-      const trtSorted = trt.sort((a,b) => a._diff - b._diff);
-      if (trtSorted.length === 0) {
-        trtList.innerHTML = '<div class="rt-empty">No TRT patients tracked yet.</div>';
-      } else {
-        trtList.innerHTML = trtSorted.map(p => rtRenderItem(p, p._next)).join('');
-      }
+      // All tab
+      const allList = document.getElementById('rt-all-list');
+      const allSorted = rtPatients.slice().sort((a,b) => a._diff - b._diff);
+      allList.innerHTML = allSorted.length
+        ? allSorted.map(p => rtRenderItem(p, p._next)).join('')
+        : '<div class="rt-empty">No patients tracked yet.</div>';
 
-      // GLP-1 tab
-      const glp1List = document.getElementById('rt-glp1-list');
-      const glp1Sorted = glp1.sort((a,b) => a._diff - b._diff);
-      if (glp1Sorted.length === 0) {
-        glp1List.innerHTML = '<div class="rt-empty">No GLP-1 patients tracked yet.</div>';
-      } else {
-        glp1List.innerHTML = glp1Sorted.map(p => rtRenderItem(p, p._next)).join('');
-      }
+      // Per-type tabs
+      const types = ['trt','glp1','peptide','sexual_health','hormone_support','labs','supplement','other'];
+      types.forEach(t => {
+        const el = document.getElementById('rt-' + t + '-list');
+        if (!el) return;
+        const items = rtPatients.filter(p => p.service_type === t).sort((a,b) => a._diff - b._diff);
+        el.innerHTML = items.length
+          ? items.map(p => rtRenderItem(p, p._next)).join('')
+          : `<div class="rt-empty">No ${RT_TYPE_LABELS[t]} patients tracked yet.</div>`;
+      });
 
     } catch(e) {
       console.warn('Retention tracker load error:', e);
@@ -1982,7 +2027,7 @@
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
-              labels: { color: '#6b7a99', font: { family: 'Inter', size: 12 } }
+              display: false
             },
             tooltip: {
               callbacks: {
@@ -1994,13 +2039,14 @@
           },
           scales: {
             x: {
-              ticks: { color: '#6b7a99', font: { size: 11 } },
-              grid: { color: 'rgba(0,0,0,0.05)' }
+              ticks: { color: '#6b7a99', font: { size: 9 }, maxTicksLimit: 5, autoSkip: true },
+              grid: { display: false }
             },
             y: {
               ticks: {
                 color: '#6b7a99',
-                font: { size: 11 },
+                font: { size: 9 },
+                maxTicksLimit: 3,
                 callback: function(v) { return '$' + (v / 1000).toFixed(0) + 'k'; }
               },
               grid: { color: 'rgba(0,0,0,0.05)' }
