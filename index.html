@@ -842,10 +842,12 @@
       <div class="section-title">Tag Conversion Analytics</div>
       <div id="tag-empty" style="text-align:center;color:var(--text-muted);padding:30px;background:var(--card);border-radius:var(--radius);">Loading tag data...</div>
 
-      <!-- No-Show / Cancelled Bar Chart -->
-      <div class="trend-card" id="tag-chart-wrap" style="display:none;margin-bottom:12px;padding:16px;">
-        <div style="font-weight:600;margin-bottom:8px;color:var(--text);">Top 10 Tags — No-Show &amp; Cancelled</div>
-        <canvas id="tag-noshow-chart" height="300"></canvas>
+      <!-- No-Show / Cancelled Bar Chart (compact) -->
+      <div class="trend-card" id="tag-chart-wrap" style="display:none;margin-bottom:12px;padding:10px 12px;max-width:480px;">
+        <div style="font-weight:600;margin-bottom:4px;color:var(--text);font-size:12px;">Top Tags — No-Show &amp; Cancelled</div>
+        <div style="position:relative;height:140px;width:100%;">
+          <canvas id="tag-noshow-chart"></canvas>
+        </div>
       </div>
 
       <div class="trend-card" id="tag-table-wrap" style="display:none;">
@@ -2105,18 +2107,18 @@
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              labels: { color: '#6b7a99', font: { family: 'Inter', size: 12 } }
+              labels: { color: '#6b7a99', font: { family: 'Inter', size: 9 }, boxWidth: 10, padding: 6 }
             }
           },
           scales: {
             x: {
               stacked: true,
-              ticks: { color: '#6b7a99', font: { size: 11 }, stepSize: 1 },
-              grid: { color: 'rgba(0,0,0,0.05)' }
+              ticks: { color: '#6b7a99', font: { size: 9 }, stepSize: 1, maxTicksLimit: 4 },
+              grid: { display: false }
             },
             y: {
               stacked: true,
-              ticks: { color: '#6b7a99', font: { size: 11 } },
+              ticks: { color: '#6b7a99', font: { size: 9 } },
               grid: { display: false }
             }
           }
