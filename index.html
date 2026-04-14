@@ -754,7 +754,14 @@
 
     <!-- REVENUE FORECAST -->
     <div id="forecast-section" style="margin-top:32px;">
-      <div class="section-title">Revenue Forecast</div>
+      <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <span>Revenue Forecast</span>
+        <button id="forecast-refresh-btn" onclick="refreshForecast()" style="padding:8px 16px;background:var(--accent);border:none;border-radius:999px;color:white;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+          <span id="forecast-refresh-icon">&#x21bb;</span>
+          <span id="forecast-refresh-text">Refresh</span>
+        </button>
+      </div>
+      <div id="forecast-last-updated" style="font-size:12px;color:var(--text-muted);margin:-4px 0 12px;"></div>
       <div id="forecast-empty" style="text-align:center;color:var(--text-muted);padding:30px;background:var(--card);border-radius:var(--radius);">Loading forecast data...</div>
 
       <!-- Forecast KPIs -->
@@ -1469,6 +1476,45 @@
     btn.innerHTML = isOpen ? `Show all ${total} &#x25BC;` : 'Show less &#x25B2;';
   };
 
+  // Trigger Agent 9 Revenue Forecast webhook and reload data when done
+  window.refreshForecast = async function() {
+    const btn = document.getElementById('forecast-refresh-btn');
+    const icon = document.getElementById('forecast-refresh-icon');
+    const text = document.getElementById('forecast-refresh-text');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'wait';
+    text.textContent = 'Refreshing…';
+    icon.style.display = 'inline-block';
+    icon.style.animation = 'spin 1s linear infinite';
+    try {
+      const res = await fetch('https://n8n.alphaclinicai.com/webhook/agent9-forecast-refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      });
+      if (!res.ok) throw new Error('Webhook returned ' + res.status);
+      // Give Supabase a second to settle the upsert, then reload
+      await new Promise(r => setTimeout(r, 1500));
+      await loadForecast();
+      if (typeof loadForecastChart === 'function') await loadForecastChart();
+      text.textContent = 'Refreshed';
+      icon.innerHTML = '&#x2713;';
+      setTimeout(() => { text.textContent = 'Refresh'; icon.innerHTML = '&#x21bb;'; }, 2500);
+    } catch (e) {
+      text.textContent = 'Failed';
+      icon.innerHTML = '&#x26A0;';
+      console.error('Forecast refresh failed:', e);
+      setTimeout(() => { text.textContent = 'Refresh'; icon.innerHTML = '&#x21bb;'; }, 3500);
+    } finally {
+      icon.style.animation = '';
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.style.cursor = '';
+    }
+  };
+
   // ---- GOAL EDITING ----
   let currentGoalMonth = null;
 
@@ -1913,15 +1959,28 @@
   // ── Revenue Forecast ──
   async function loadForecast() {
     try {
-      const rows = await supaFetch('revenue_forecast', 'location_slug=eq.troy&order=report_date.desc&limit=1');
+      const rows = await supaFetch('revenue_forecast', 'location_slug=eq.troy&order=report_date.desc,created_at.desc&limit=1');
       if (!rows || rows.length === 0) {
-        document.getElementById('forecast-empty').textContent = 'No forecast data yet — Agent 9 writes weekly on Monday.';
+        document.getElementById('forecast-empty').textContent = 'No forecast data yet — click Refresh to generate.';
         return;
       }
       const f = rows[0];
       document.getElementById('forecast-empty').style.display = 'none';
       document.getElementById('forecast-kpis').style.display = '';
       document.getElementById('forecast-details').style.display = '';
+
+      // Last-updated label
+      if (f.created_at) {
+        const ts = new Date(f.created_at);
+        const now = new Date();
+        const mins = Math.round((now - ts) / 60000);
+        let ago;
+        if (mins < 1) ago = 'just now';
+        else if (mins < 60) ago = mins + ' min ago';
+        else if (mins < 1440) ago = Math.round(mins / 60) + ' hr ago';
+        else ago = Math.round(mins / 1440) + ' days ago';
+        document.getElementById('forecast-last-updated').textContent = 'Last updated: ' + ts.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' (' + ago + ')';
+      }
 
       const fmt = n => '$' + Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
