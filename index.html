@@ -1263,14 +1263,34 @@
     const lobbieBilling = (billingData || []).filter(b => b.line_item_name && b.amount_cents > 0);
 
     if (lobbieBilling.length > 0) {
-      // Group billing items by patient for cleaner display
-      const byPatient = {};
+      // Group billing items by patient — but DON'T sum line item amounts directly.
+      // Lobbie's invoice detail returns scheduled future subscription renewals
+      // alongside today's actual charge, so line items sum to ~2x invoice_total_cents.
+      // Group by invoice first, use invoice_total_cents as the real paid amount,
+      // then roll invoices up to the patient level.
+      const byInvoice = {};
       for (const b of lobbieBilling) {
-        const name = (b.patient_name || 'Unknown').trim();
-        if (!byPatient[name]) byPatient[name] = { items: [], totalCents: 0, status: b.invoice_status || '' };
-        byPatient[name].items.push(b.line_item_name);
-        byPatient[name].totalCents += parseInt(b.amount_cents || 0);
-        if (b.invoice_status) byPatient[name].status = b.invoice_status;
+        const key = b.invoice_id;
+        if (!byInvoice[key]) byInvoice[key] = {
+          patient: (b.patient_name || 'Unknown').trim(),
+          items: [],
+          totalCents: parseInt(b.invoice_total_cents || 0),
+          status: b.invoice_status || ''
+        };
+        byInvoice[key].items.push(b.line_item_name);
+        if (b.invoice_status) byInvoice[key].status = b.invoice_status;
+      }
+      const byPatient = {};
+      for (const inv of Object.values(byInvoice)) {
+        const name = inv.patient;
+        if (!byPatient[name]) byPatient[name] = { items: [], totalCents: 0, status: inv.status };
+        // De-dup item names per patient so a list of 4 line items on one invoice
+        // doesn't show "Annual Labs, Initial Labs, ..." repeated across invoices
+        for (const it of inv.items) {
+          if (!byPatient[name].items.includes(it)) byPatient[name].items.push(it);
+        }
+        byPatient[name].totalCents += inv.totalCents;
+        if (inv.status) byPatient[name].status = inv.status;
       }
       const sorted = Object.entries(byPatient).sort((a, b) => b[1].totalCents - a[1].totalCents);
       const maxAmt = sorted.length > 0 ? sorted[0][1].totalCents / 100 : 1;
