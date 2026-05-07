@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Gameday Men's Health — Dashboard</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -460,7 +463,49 @@
       background: var(--card); border-radius: var(--radius);
       padding: 14px 18px; box-shadow: var(--shadow);
       border-left: 4px solid var(--purple);
+      cursor: pointer; transition: transform .15s ease, box-shadow .15s ease;
     }
+    .seo-post-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+    /* Post modal */
+    .seo-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 9998;
+      display: none; align-items: center; justify-content: center;
+    }
+    .seo-modal-backdrop.open { display: flex; }
+    .seo-modal {
+      background: #fff; border-radius: 12px; max-width: 720px; width: 92%;
+      max-height: 85vh; box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+      padding: 28px 32px; position: relative;
+      display: flex; flex-direction: column;
+    }
+    .seo-modal-close {
+      position: absolute; top: 14px; right: 18px; border: none; background: transparent;
+      font-size: 24px; color: var(--text-dim); cursor: pointer; line-height: 1;
+    }
+    .seo-modal h3 { font-size: 1.1rem; margin-bottom: 12px; color: var(--primary); flex-shrink: 0; }
+    .seo-modal-body {
+      white-space: pre-wrap; font-size: 0.95rem; line-height: 1.55;
+      background: var(--bg); padding: 16px; border-radius: 8px; margin: 12px 0;
+      border: 1px solid var(--line); color: var(--primary);
+      flex: 1 1 auto; overflow-y: auto; min-height: 0;
+    }
+    .seo-modal-meta { display: flex; gap: 14px; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; flex-wrap: wrap; flex-shrink: 0; }
+    .seo-modal-actions {
+      display: flex; gap: 10px; margin-top: 14px; padding-top: 14px;
+      flex-wrap: wrap; flex-shrink: 0;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+    .seo-btn {
+      padding: 8px 16px; border-radius: 6px; border: 1px solid var(--line);
+      background: #fff; color: var(--primary); font-weight: 600; font-size: 0.85rem;
+      cursor: pointer; transition: background .15s;
+    }
+    .seo-btn:hover { background: var(--bg); }
+    .seo-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .seo-btn.primary:hover { background: #a80000; }
+    .seo-btn.success { background: #16a34a; border-color: #16a34a; color: #fff; }
+    .seo-btn.success:hover { background: #0e7c37; }
     .seo-post-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 4px; }
     .seo-post-content {
       font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;
@@ -902,6 +947,22 @@
       <div class="section-title" style="margin-top:20px;">SEO Agent Activity</div>
       <div id="seo-action-log" style="display:flex;flex-direction:column;gap:6px;">
         <div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No activity yet</div>
+      </div>
+    </div>
+
+    <!-- SEO POST MODAL -->
+    <div id="seo-post-modal" class="seo-modal-backdrop" onclick="if(event.target===this)closeSeoPostModal()">
+      <div class="seo-modal">
+        <button class="seo-modal-close" onclick="closeSeoPostModal()" aria-label="Close">&times;</button>
+        <h3 id="seo-modal-title">GBP Post</h3>
+        <div class="seo-modal-meta" id="seo-modal-meta"></div>
+        <div class="seo-modal-body" id="seo-modal-body"></div>
+        <div class="seo-modal-actions">
+          <button class="seo-btn success" onclick="publishSeoPostToGoogle()">🚀 Publish to Google Now</button>
+          <button class="seo-btn primary" onclick="copySeoPost()">📋 Copy to clipboard</button>
+          <a id="seo-modal-gbp-link" class="seo-btn" target="_blank" rel="noopener" href="https://business.google.com/posts">Open GBP in new tab</a>
+          <button class="seo-btn" onclick="markSeoPostPublished()" title="Use this if you published manually via Business Profile Manager">Mark manually published</button>
+        </div>
       </div>
     </div>
 
@@ -1626,23 +1687,64 @@
 
   // ---- SEO DASHBOARD SECTION ----
 
-  async function loadSEOData() {
-    try {
-      const [reviews, posts, keywords, actions] = await Promise.all([
-        supaFetch('seo_reviews', `location_slug=eq.${LOCATION}&order=created_at.desc&limit=10`),
-        supaFetch('seo_gbp_posts', `location_slug=eq.${LOCATION}&order=created_at.desc&limit=5`),
-        supaFetch('seo_keyword_rankings', `location_slug=eq.${LOCATION}&order=rank_date.desc&limit=20`),
-        supaFetch('seo_action_log', `location_slug=eq.${LOCATION}&order=created_at.desc&limit=8`),
-      ]);
-
-      renderSEOKPIs(reviews, posts, keywords);
-      renderSEOReviews(reviews);
-      renderSEOKeywords(keywords);
-      renderSEOPosts(posts);
-      renderSEOActions(actions);
-    } catch (e) {
-      console.warn('SEO data load error:', e);
+  // Tracks which dashboard sections failed to load — surfaced in the global health banner
+  // so failures stop being invisible.
+  window.__dashboardErrors = window.__dashboardErrors || [];
+  function reportDashboardError(section, err) {
+    const msg = err && err.message ? err.message : String(err);
+    window.__dashboardErrors.push({ section, message: msg, when: new Date().toISOString() });
+    console.error(`[DASHBOARD ERROR] ${section}: ${msg}`);
+    renderHealthBanner();
+  }
+  function renderHealthBanner() {
+    let bar = document.getElementById('dashboard-health-banner');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'dashboard-health-banner';
+      bar.style.cssText = 'position:sticky;top:0;z-index:9999;background:#fee2e2;border-bottom:2px solid #dc2626;color:#7f1d1d;padding:10px 18px;font-size:0.85rem;font-weight:600;display:none;';
+      document.body.insertBefore(bar, document.body.firstChild);
     }
+    if (window.__dashboardErrors.length === 0) { bar.style.display = 'none'; return; }
+    const last = window.__dashboardErrors.slice(-3);
+    bar.style.display = 'block';
+    bar.innerHTML = `⚠ ${window.__dashboardErrors.length} section(s) failed to load: ` +
+      last.map(e => `<strong>${e.section}</strong> (${e.message.slice(0, 80)})`).join(' · ') +
+      ` <a href="#" onclick="window.__dashboardErrors=[];renderHealthBanner();return false;" style="margin-left:8px;color:#7f1d1d;text-decoration:underline;">dismiss</a>`;
+  }
+  window.renderHealthBanner = renderHealthBanner;
+
+  async function loadSEOData() {
+    // Use allSettled so one bad fetch doesn't black out every other SEO panel.
+    // Each fetch failure is reported into the global health banner so silent
+    // breakage is impossible.
+    const queries = [
+      ['seo_reviews',          `location_slug=eq.${LOCATION}&order=review_date.desc&limit=250`],
+      ['seo_gbp_posts',        `location_slug=eq.${LOCATION}&order=created_at.desc&limit=5`],
+      ['seo_keyword_rankings', `location_slug=eq.${LOCATION}&order=date.desc&limit=20`],
+      ['seo_action_log',       `location_slug=eq.${LOCATION}&order=created_at.desc&limit=8`],
+    ];
+    const results = await Promise.allSettled(queries.map(([t, q]) => supaFetch(t, q)));
+    const data = {};
+    results.forEach((r, i) => {
+      const [name] = queries[i];
+      if (r.status === 'fulfilled') {
+        data[name] = r.value;
+      } else {
+        data[name] = { __error: r.reason && r.reason.message ? r.reason.message : String(r.reason) };
+        reportDashboardError(`SEO/${name}`, r.reason);
+      }
+    });
+
+    const reviews  = data.seo_reviews?.__error          ? data.seo_reviews          : data.seo_reviews;
+    const posts    = data.seo_gbp_posts?.__error        ? data.seo_gbp_posts        : data.seo_gbp_posts;
+    const keywords = data.seo_keyword_rankings?.__error ? data.seo_keyword_rankings : data.seo_keyword_rankings;
+    const actions  = data.seo_action_log?.__error       ? data.seo_action_log       : data.seo_action_log;
+
+    try { renderSEOKPIs(reviews, posts, keywords); } catch (e) { reportDashboardError('SEO/KPIs', e); }
+    try { renderSEOReviews(reviews); }              catch (e) { reportDashboardError('SEO/Reviews render', e); }
+    try { renderSEOKeywords(keywords); }            catch (e) { reportDashboardError('SEO/Keywords render', e); }
+    try { renderSEOPosts(posts); }                  catch (e) { reportDashboardError('SEO/Posts render', e); }
+    try { renderSEOActions(actions); }              catch (e) { reportDashboardError('SEO/Actions render', e); }
   }
 
   function renderSEOKPIs(reviews, posts, keywords) {
@@ -1664,9 +1766,10 @@
     document.getElementById('seo-draft-posts').textContent = drafts.length;
     document.getElementById('seo-published-posts').textContent = published.length + ' published';
 
-    // Top keyword
+    // Top keyword — show the highest-scoring keyword regardless of whether trend_score is 0.
+    // Google Trends frequently returns 0 for niche terms (low search volume), so filtering
+    // by > 0 hides the KPI entirely. We'd rather show "no trend data" than "--".
     if (keywords && keywords.length > 0) {
-      // Deduplicate by keyword, keep highest trend score
       const best = {};
       for (const k of keywords) {
         if (!best[k.keyword] || (k.trend_score || 0) > (best[k.keyword].trend_score || 0)) {
@@ -1674,9 +1777,12 @@
         }
       }
       const sorted = Object.values(best).sort((a, b) => (b.trend_score || 0) - (a.trend_score || 0));
-      if (sorted.length > 0 && sorted[0].trend_score > 0) {
+      if (sorted.length > 0) {
         document.getElementById('seo-top-keyword').textContent = sorted[0].keyword;
-        document.getElementById('seo-top-score').textContent = 'trend score: ' + sorted[0].trend_score;
+        const score = sorted[0].trend_score || 0;
+        document.getElementById('seo-top-score').textContent = score > 0
+          ? `trend score: ${score}`
+          : `${sorted.length} tracked · no trend data yet`;
       }
     }
   }
@@ -1690,18 +1796,29 @@
 
   function renderSEOReviews(reviews) {
     const container = document.getElementById('seo-reviews-list');
-    if (!reviews || reviews.length === 0) {
+    if (reviews && reviews.__error) {
+      container.innerHTML = `<div style="color:#dc2626;padding:20px;background:#fef2f2;border-radius:var(--radius);font-weight:600;">⚠ Failed to load reviews: ${escHtml(reviews.__error)}</div>`;
+      return;
+    }
+    if (!Array.isArray(reviews) || reviews.length === 0) {
       container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No reviews synced yet — waiting for GBP API access</div>';
       return;
     }
 
-    container.innerHTML = reviews.slice(0, 5).map(r => {
+    // Cache for modal lookup
+    window.__seoReviews = reviews;
+    container.innerHTML = reviews.slice(0, 5).map((r, i) => {
       const sentiment = r.star_rating >= 4 ? '' : r.star_rating === 3 ? ' neutral' : ' negative';
-      const replyHtml = r.reply_draft
-        ? `<div class="seo-review-reply"><span class="label">AI Draft Reply: </span>${escHtml(r.reply_draft).substring(0, 120)}...</div>`
-        : r.reply_status === 'pending'
-          ? '<div class="seo-review-reply" style="color:var(--warning);"><span class="label">Awaiting Reply</span></div>'
-          : '';
+      const hasDraft = r.reply_draft && (r.reply_status === 'drafted' || r.reply_status === 'pending');
+      const isReplied = r.reply_status === 'replied' && r.reply_final;
+      let replyHtml = '';
+      if (isReplied) {
+        replyHtml = `<div class="seo-review-reply"><span class="label">Replied: </span>${escHtml(r.reply_final).substring(0, 120)}${r.reply_final.length > 120 ? '...' : ''}</div>`;
+      } else if (hasDraft) {
+        replyHtml = `<div class="seo-review-reply"><span class="label">AI Draft: </span>${escHtml(r.reply_draft).substring(0, 120)}${r.reply_draft.length > 120 ? '...' : ''}<div style="margin-top:10px;display:flex;gap:8px;align-items:center;"><button class="seo-btn success" style="font-size:0.9rem;padding:10px 18px;font-weight:700;box-shadow:0 2px 6px rgba(13,148,136,0.3);" onclick="event.stopPropagation(); openReviewReplyModal(${i})">✓ Approve &amp; Post Reply</button><span style="font-size:0.75rem;color:var(--text-muted);">click to edit and post to Google</span></div></div>`;
+      } else if (r.reply_status === 'pending') {
+        replyHtml = '<div class="seo-review-reply" style="color:var(--warning);"><span class="label">Awaiting AI draft (next monitor run)</span></div>';
+      }
       return `<div class="seo-review-card${sentiment}">
         <div class="seo-review-header">
           <span class="seo-review-name">${escHtml(r.reviewer_name || 'Anonymous')}</span>
@@ -1713,9 +1830,82 @@
     }).join('');
   }
 
+  // --- Review Reply Modal ---
+  window.openReviewReplyModal = function(index) {
+    const review = (window.__seoReviews || [])[index];
+    if (!review) return;
+    window.__currentReview = review;
+    document.getElementById('seo-modal-title').textContent = 'Reply to ' + (review.reviewer_name || 'Anonymous');
+    const bodyEl = document.getElementById('seo-modal-body');
+    const metaEl = document.getElementById('seo-modal-meta');
+    metaEl.innerHTML = `
+      <span>${starsHtml(review.star_rating)}</span>
+      <span>${formatDate(review.review_date ? review.review_date.split('T')[0] : '')}</span>
+    `;
+    bodyEl.innerHTML = `
+      <div style="margin-bottom:12px;padding:10px;background:#fff;border-left:3px solid var(--teal);font-style:italic;">
+        "${escHtml(review.comment || 'No comment')}"
+      </div>
+      <label style="font-size:0.85rem;font-weight:600;color:var(--primary);display:block;margin-bottom:6px;">Your Reply (editable):</label>
+      <textarea id="reply-textarea" style="width:100%;min-height:140px;padding:10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:0.9rem;line-height:1.5;resize:vertical;">${escHtml(review.reply_draft || '')}</textarea>
+    `;
+    // Swap modal action buttons for the reply flow
+    const actions = document.querySelector('#seo-post-modal .seo-modal-actions');
+    actions.innerHTML = `
+      <button class="seo-btn success" onclick="approveAndPostReply()">✓ Approve & Post to Google</button>
+      <button class="seo-btn primary" onclick="copyReplyDraft()">📋 Copy draft</button>
+      <button class="seo-btn" onclick="closeSeoPostModal()">Cancel</button>
+    `;
+    document.getElementById('seo-post-modal').classList.add('open');
+  };
+
+  window.copyReplyDraft = function() {
+    const txt = document.getElementById('reply-textarea').value;
+    navigator.clipboard.writeText(txt).then(() => {
+      const btn = document.querySelector('#seo-post-modal .seo-btn.primary');
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = '📋 Copy draft'; }, 1500);
+    });
+  };
+
+  window.approveAndPostReply = async function() {
+    const review = window.__currentReview;
+    if (!review || !review.review_id) return;
+    const text = document.getElementById('reply-textarea').value.trim();
+    if (!text) { alert('Reply text cannot be empty'); return; }
+    const btn = document.querySelector('#seo-post-modal .seo-btn.success');
+    btn.textContent = 'Posting to Google...';
+    btn.disabled = true;
+    try {
+      const res = await fetch('http://localhost:8500/api/reviews/publish-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ review_id: review.review_id, reply_text: text, location: LOCATION })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        btn.textContent = '✓ Live on Google!';
+        setTimeout(async () => { closeSeoPostModal(); await loadSEOData(); }, 1500);
+      } else {
+        const msg = (data.detail && data.detail.hint) || data.detail || 'Post failed';
+        alert('Reply post failed:\n\n' + JSON.stringify(data.detail || data, null, 2));
+        btn.textContent = '✗ Failed';
+        setTimeout(() => { btn.textContent = '✓ Approve & Post to Google'; btn.disabled = false; }, 3000);
+      }
+    } catch (e) {
+      alert('Could not reach SEO agent (localhost:8500). Is the Python service running?\n\n' + e.message);
+      btn.textContent = '✗ Agent offline';
+      setTimeout(() => { btn.textContent = '✓ Approve & Post to Google'; btn.disabled = false; }, 3000);
+    }
+  };
+
   function renderSEOKeywords(keywords) {
     const tbody = document.getElementById('seo-keyword-body');
-    if (!keywords || keywords.length === 0) {
+    if (keywords && keywords.__error) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#dc2626;padding:20px;background:#fef2f2;font-weight:600;">⚠ Failed to load keywords: ${escHtml(keywords.__error)}</td></tr>`;
+      return;
+    }
+    if (!Array.isArray(keywords) || keywords.length === 0) {
       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:20px;">No keyword data yet — runs weekly Monday 8am</td></tr>';
       return;
     }
@@ -1723,7 +1913,7 @@
     // Deduplicate: show latest date per keyword
     const latest = {};
     for (const k of keywords) {
-      if (!latest[k.keyword] || k.rank_date > latest[k.keyword].rank_date) {
+      if (!latest[k.keyword] || k.date > latest[k.keyword].date) {
         latest[k.keyword] = k;
       }
     }
@@ -1742,35 +1932,152 @@
             <span style="font-weight:700;font-size:0.85rem;">${score}</span>
           </div>
         </td>
-        <td style="font-size:0.75rem;color:var(--text-dim);">${formatDate(k.rank_date)}</td>
+        <td style="font-size:0.75rem;color:var(--text-dim);">${formatDate(k.date)}</td>
       </tr>`;
     }).join('');
   }
 
   function renderSEOPosts(posts) {
     const container = document.getElementById('seo-posts-list');
-    if (!posts || posts.length === 0) {
+    if (posts && posts.__error) {
+      container.innerHTML = `<div style="color:#dc2626;padding:20px;background:#fef2f2;border-radius:var(--radius);font-weight:600;">⚠ Failed to load posts: ${escHtml(posts.__error)}</div>`;
+      return;
+    }
+    if (!Array.isArray(posts) || posts.length === 0) {
       container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No posts yet — runs weekly Tuesday 9am</div>';
       return;
     }
 
-    container.innerHTML = posts.map(p => {
+    // Cache posts for modal
+    window.__seoPosts = posts;
+    container.innerHTML = posts.map((p, i) => {
       const statusClass = (p.status || 'draft').toLowerCase();
-      return `<div class="seo-post-card">
+      return `<div class="seo-post-card" onclick="openSeoPostModal(${i})">
         <div class="seo-post-title">${escHtml(p.title || 'GBP Post')}</div>
         <div class="seo-post-content">${escHtml(p.content || '')}</div>
         <div class="seo-post-meta">
           <span class="seo-status-badge ${statusClass}">${p.status || 'draft'}</span>
           <span>${(p.content || '').length} chars</span>
           <span>${formatDate(p.created_at ? p.created_at.split('T')[0] : '')}</span>
+          <span style="margin-left:auto;color:var(--accent);font-weight:600;">Click to view →</span>
         </div>
       </div>`;
     }).join('');
   }
 
+  // --- SEO Post Modal ---
+  window.openSeoPostModal = function(index) {
+    const post = (window.__seoPosts || [])[index];
+    if (!post) return;
+    window.__currentSeoPost = post;
+    document.getElementById('seo-modal-title').textContent = post.title || 'GBP Post';
+    document.getElementById('seo-modal-body').textContent = post.content || '';
+    const metaEl = document.getElementById('seo-modal-meta');
+    const date = post.created_at ? new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const chars = (post.content || '').length;
+    const statusClass = (post.status || 'draft').toLowerCase();
+    metaEl.innerHTML = `
+      <span class="seo-status-badge ${statusClass}">${post.status || 'draft'}</span>
+      <span>${chars} chars</span>
+      <span>${date}</span>
+      ${post.cta_url ? `<span>CTA: <a href="${escHtml(post.cta_url)}" target="_blank" style="color:var(--accent);">${escHtml(post.cta_url)}</a></span>` : ''}
+    `;
+    document.getElementById('seo-post-modal').classList.add('open');
+  };
+
+  window.closeSeoPostModal = function() {
+    document.getElementById('seo-post-modal').classList.remove('open');
+  };
+
+  window.copySeoPost = function() {
+    const post = window.__currentSeoPost;
+    if (!post) return;
+    navigator.clipboard.writeText(post.content || '').then(() => {
+      const btn = document.querySelector('#seo-post-modal .seo-btn.primary');
+      const original = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+  };
+
+  // Mark manually published (no API call to Google — user already posted manually)
+  window.markSeoPostPublished = async function() {
+    const post = window.__currentSeoPost;
+    if (!post || !post.id) return;
+    const btn = Array.from(document.querySelectorAll('#seo-post-modal .seo-btn')).find(b => b.textContent.includes('Mark manually'));
+    const original = btn.textContent;
+    btn.textContent = 'Saving...';
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/seo_gbp_posts?id=eq.${post.id}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ status: 'published', published_at: new Date().toISOString() })
+      });
+      if (res.ok) {
+        btn.textContent = '✓ Marked Published';
+        setTimeout(async () => { closeSeoPostModal(); await loadSEOData(); }, 900);
+      } else {
+        btn.textContent = '✗ Failed';
+        btn.disabled = false;
+      }
+    } catch (e) {
+      btn.textContent = '✗ Error';
+      btn.disabled = false;
+    }
+  };
+
+  // Publish directly to Google via local SEO agent API
+  window.publishSeoPostToGoogle = async function() {
+    const post = window.__currentSeoPost;
+    if (!post || !post.id) return;
+    const btn = document.querySelector('#seo-post-modal .seo-btn.success');
+    const original = btn.textContent;
+    btn.textContent = 'Publishing to Google...';
+    btn.disabled = true;
+    try {
+      const res = await fetch('http://localhost:8500/api/posts/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: post.id, location: LOCATION })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        btn.textContent = '✓ Live on Google!';
+        setTimeout(async () => { closeSeoPostModal(); await loadSEOData(); }, 1500);
+      } else {
+        const msg = (data.detail && data.detail.hint) || data.detail || 'Publish failed';
+        btn.textContent = '✗ ' + (typeof msg === 'string' ? msg.slice(0, 60) : 'Google rejected');
+        console.error('Publish failed:', data);
+        alert('Google Publish failed.\n\n' + JSON.stringify(data.detail || data, null, 2));
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 5000);
+      }
+    } catch (e) {
+      btn.textContent = '✗ Agent offline';
+      alert('Could not reach the local SEO agent (localhost:8500). Make sure the Python service is running.\n\n' + e.message);
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 3000);
+    }
+  };
+
+  // Close modal on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('seo-post-modal')?.classList.contains('open')) {
+      closeSeoPostModal();
+    }
+  });
+
   function renderSEOActions(actions) {
     const container = document.getElementById('seo-action-log');
-    if (!actions || actions.length === 0) {
+    if (actions && actions.__error) {
+      container.innerHTML = `<div style="color:#dc2626;padding:20px;background:#fef2f2;border-radius:var(--radius);font-weight:600;">⚠ Failed to load activity log: ${escHtml(actions.__error)}</div>`;
+      return;
+    }
+    if (!Array.isArray(actions) || actions.length === 0) {
       container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px;background:var(--card);border-radius:var(--radius);">No SEO activity yet</div>';
       return;
     }
