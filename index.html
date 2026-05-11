@@ -1877,7 +1877,7 @@
     btn.textContent = 'Posting to Google...';
     btn.disabled = true;
     try {
-      const res = await fetch('http://localhost:8500/api/reviews/publish-reply', {
+      const res = await fetch('https://n8n.alphaclinicai.com/webhook/seo/reviews/publish-reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ review_id: review.review_id, reply_text: text, location: LOCATION })
@@ -1893,7 +1893,7 @@
         setTimeout(() => { btn.textContent = '✓ Approve & Post to Google'; btn.disabled = false; }, 3000);
       }
     } catch (e) {
-      alert('Could not reach SEO agent (localhost:8500). Is the Python service running?\n\n' + e.message);
+      alert('Could not reach SEO agent via n8n proxy. Check workflow is active.\n\n' + e.message);
       btn.textContent = '✗ Agent offline';
       setTimeout(() => { btn.textContent = '✓ Approve & Post to Google'; btn.disabled = false; }, 3000);
     }
@@ -2041,7 +2041,7 @@
     btn.textContent = 'Publishing to Google...';
     btn.disabled = true;
     try {
-      const res = await fetch('http://localhost:8500/api/posts/publish', {
+      const res = await fetch('https://n8n.alphaclinicai.com/webhook/seo/posts/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ post_id: post.id, location: LOCATION })
@@ -2059,7 +2059,7 @@
       }
     } catch (e) {
       btn.textContent = '✗ Agent offline';
-      alert('Could not reach the local SEO agent (localhost:8500). Make sure the Python service is running.\n\n' + e.message);
+      alert('Could not reach SEO agent via n8n proxy. Check workflow is active.\n\n' + e.message);
       setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 3000);
     }
   };
