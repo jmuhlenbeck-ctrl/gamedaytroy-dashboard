@@ -2107,6 +2107,9 @@
   const RT_TYPE_LABELS = { trt: 'TRT', glp1: 'GLP-1' };
   const RT_TYPES = ['trt', 'glp1'];
 
+  function rtNextDueFromTp(tp) {
+    return { date: new Date(tp.due_date + 'T00:00:00'), label: tp.touchpoint_name, touchpointId: tp.id };
+  }
   function rtNextDue(p) {
     const today = new Date(); today.setHours(0,0,0,0);
     const start = p.start_date ? new Date(p.start_date + 'T00:00:00') : null;
@@ -2157,8 +2160,14 @@
   async function loadRetentionTracker() {
     try {
       const patients = await supaFetch('patient_tracker', 'location_slug=eq.troy&status=eq.active&service_type=in.(trt,glp1)&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name&limit=5000');
+      // Real per-touchpoint schedule from patient_touchpoints (ordered by due_date,
+      // so the first hit for each patient is the next-due one).
+      const tps = await supaFetch('patient_touchpoints', 'status=eq.pending&select=id,patient_id,touchpoint_key,touchpoint_name,due_date&order=due_date.asc&limit=10000');
+      const firstByPatient = new Map();
+      (tps || []).forEach(tp => { if (!firstByPatient.has(tp.patient_id)) firstByPatient.set(tp.patient_id, tp); });
       rtPatients = (patients || []).map(p => {
-        p._next = rtNextDue(p);
+        const tp = firstByPatient.get(p.id);
+        p._next = tp ? rtNextDueFromTp(tp) : rtNextDue(p);
         p._diff = rtDaysDiff(p._next.date);
         return p;
       });
@@ -2227,6 +2236,17 @@
 
   async function rtMarkDone(patientId) {
     const today = new Date().toISOString().split('T')[0];
+    // If this patient's next-due came from patient_touchpoints, mark that specific
+    // touchpoint completed so the next pending one surfaces on reload.
+    const p = rtPatients.find(x => x.id === patientId);
+    const tpId = p && p._next && p._next.touchpointId;
+    if (tpId) {
+      await fetch(`${SUPABASE_URL}/rest/v1/patient_touchpoints?id=eq.${tpId}`, {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ status: 'completed', completed_at: new Date().toISOString() })
+      });
+    }
     await fetch(`${SUPABASE_URL}/rest/v1/patient_tracker?id=eq.${patientId}`, {
       method: 'PATCH',
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },

@@ -476,6 +476,11 @@
       supplement: 'Supplement', labs: 'Labs', other: 'Other'
     };
 
+    // Real next-pending touchpoint from patient_touchpoints (preferred).
+    // Falls back to cadence calc for service types that don't seed touchpoints (peptide, labs, etc.)
+    function nextDueFromTp(tp) {
+      return { date: new Date(tp.due_date + 'T00:00:00'), label: tp.touchpoint_name, touchpointId: tp.id };
+    }
     function nextDue(p) {
       const start = p.start_date ? new Date(p.start_date + 'T00:00:00') : null;
       const last = p.last_touchpoint_date ? new Date(p.last_touchpoint_date + 'T00:00:00') : null;
@@ -577,8 +582,14 @@
     async function loadAll() {
       try {
         const raw = await sbGet('patient_tracker', `location_slug=eq.${LOCATION}&status=eq.active&select=id,patient_name,service_type,start_date,last_touchpoint_date&order=patient_name&limit=5000`);
+        // Pull every pending touchpoint ordered by due_date so the first hit
+        // per patient is the next-due one.
+        const tps = await sbGet('patient_touchpoints', `status=eq.pending&select=id,patient_id,touchpoint_key,touchpoint_name,due_date&order=due_date.asc&limit=10000`);
+        const firstByPatient = new Map();
+        (tps || []).forEach(tp => { if (!firstByPatient.has(tp.patient_id)) firstByPatient.set(tp.patient_id, tp); });
         patients = (raw || []).map(p => {
-          p._next = nextDue(p);
+          const tp = firstByPatient.get(p.id);
+          p._next = tp ? nextDueFromTp(tp) : nextDue(p);
           p._diff = daysDiff(p._next.date);
           return p;
         });
@@ -591,6 +602,17 @@
     // ===== ACTIONS =====
     async function markDone(id) {
       const todayStr = new Date().toISOString().split('T')[0];
+      // Find the patient — if their next-due came from patient_touchpoints,
+      // also mark that specific row completed so the next pending one becomes "due".
+      const p = patients.find(x => x.id === id);
+      const tpId = p && p._next && p._next.touchpointId;
+      if (tpId) {
+        await fetch(`${SUPABASE_URL}/rest/v1/patient_touchpoints?id=eq.${tpId}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ status: 'completed', completed_at: new Date().toISOString() })
+        });
+      }
       await sbPatch('patient_tracker', id, { last_touchpoint_date: todayStr });
       loadAll();
     }
