@@ -100,6 +100,12 @@
     <h1>Lobbie Sync Bookmarklets</h1>
     <p class="subtitle">Sync Lobbie data to the Gameday Dashboard — run these while logged into <a href="https://my.lobbie.com" target="_blank" style="color:var(--accent)">my.lobbie.com</a></p>
 
+    <!-- ========== LAST SYNCED INDICATOR ========== -->
+    <div class="card" id="freshness-card" style="display:none;border-left:4px solid var(--warning,#f59e0b);">
+      <h3 style="margin-bottom:8px;">⏰ Sync Status</h3>
+      <div id="freshness-body" style="font-size:0.88rem;line-height:1.6;color:var(--text);">Checking...</div>
+    </div>
+
     <!-- ========== DAILY SYNC BOOKMARKLET ========== -->
     <div class="card">
       <h3>Daily Sync <span class="status-badge ready">Active</span></h3>
@@ -149,6 +155,29 @@
 
     <hr class="section-divider">
 
+    <!-- ========== BACKFILL 7 DAYS BOOKMARKLET ========== -->
+    <div class="card">
+      <h3>Backfill — Last 7 Days <span class="status-badge new">New</span></h3>
+      <p style="color:var(--text-muted);font-size:0.82rem;margin-bottom:16px;">Catches up appointments + billing for the last 7 days. Use after you've skipped daily syncs (e.g. after a long weekend or if data is stale).</p>
+
+      <div style="text-align:center;">
+        <a class="bookmarklet-btn" style="background:#7c3aed;" id="backfill-link" href="#">Backfill 7 Days</a>
+      </div>
+
+      <p style="font-size:0.78rem;color:var(--text-muted);margin-top:12px;text-align:center;">Drag to bookmarks bar, run on my.lobbie.com. Takes ~30-60 sec.</p>
+
+      <details style="margin-top:12px;">
+        <summary style="cursor:pointer;font-size:0.82rem;font-weight:600;color:var(--text-muted);">Manual setup</summary>
+        <div style="margin-top:10px;">
+          <div class="code-block" id="backfill-code"></div>
+          <button class="copy-btn" onclick="copyCode('backfill-code')">Copy</button>
+          <span class="copy-status" id="backfill-copy-status">Copied!</span>
+        </div>
+      </details>
+    </div>
+
+    <hr class="section-divider">
+
     <!-- ========== CLINICAL DATA BOOKMARKLET ========== -->
     <div class="card">
       <h3>Clinical History Sync <span class="status-badge new">New</span></h3>
@@ -182,9 +211,68 @@
     // ===== CLINICAL HISTORY BOOKMARKLET CODE =====
     const clinicalCode = `javascript:void((async()=>{const B='https://api-prod.lobbie.com/lobbie/api/secure/v1',SU='https://sjyvvemjldsbiguyfkdp.supabase.co/rest/v1',SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw',LI=1379,SC=[765,766,767,768,820];function CAT(t){if(!t)return'other';const l=t.toLowerCase();if(l.includes('initial consult')||l.includes('consult - no lab'))return'consult';if(l.includes('trt')||l.includes('testosterone')||l.includes('pellet')||l.includes('starting trt'))return'trt';if(l.includes('semaglutide')||l.includes('tirzepatide')||l.includes('glp')||l.includes('phentermine'))return'glp1';if(l.includes('gaineswave')||l.includes('gainswave'))return'gaineswave';if(l.includes('p-shot')||l.includes('p shot')||l.includes('trimix'))return'pshot';if(l.includes('peptide')||l.includes('hgh'))return'peptides';if(l.includes('lab')||l.includes('vitals'))return'labs';if(l.includes('vitamin')||l.includes('b12'))return'vitamin_shots';if(l.includes('consult')||l.includes('follow up')||l.includes('telehealth'))return'consult';return'other'}const sh={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'};let o=document.getElementById('ls-ov');if(!o){o=document.createElement('div');o.id='ls-ov';o.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;padding:16px 24px;border-radius:12px;font-family:sans-serif;font-size:14px;color:white;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:420px;background:#2563eb';document.body.appendChild(o)}try{if(!location.hostname.includes('lobbie.com')){o.style.background='#cc0000';o.innerHTML='Open <a href="https://my.lobbie.com" style="color:#fff;text-decoration:underline">my.lobbie.com</a> first';setTimeout(()=>o.remove(),5000);return}o.textContent='Loading clinical history (90 days)...';const now=new Date();const endDate=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,3,59,59);const startDate=new Date(now);startDate.setDate(startDate.getDate()-90);startDate.setHours(4,0,0,0);let allAppts=[];for(let dayOff=0;dayOff<90;dayOff+=7){const ws=new Date(startDate);ws.setDate(ws.getDate()+dayOff);const we=new Date(ws);we.setDate(we.getDate()+7);if(we>endDate){we.setTime(endDate.getTime())}o.textContent='Scanning week '+(Math.floor(dayOff/7)+1)+'/13...';const sr=await fetch(B+'/staff/scheduling/search',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({schedulerConfigIds:SC,startDateTime:ws.toISOString(),endDateTime:we.toISOString()})});if(!sr.ok)continue;const sd=await sr.json();(sd.schedules||[]).forEach(s=>allAppts=allAppts.concat(s.appointments||[]))}o.textContent='Found '+allAppts.length+' appointments. Getting details...';const patientMap={};let done=0;for(let i=0;i<allAppts.length;i+=10){const batch=allAppts.slice(i,i+10);const details=await Promise.all(batch.map(async a=>{try{const r=await fetch(B+'/staff/scheduling/appointment/'+a.appointmentId,{credentials:'include'});if(r.ok)return r.json()}catch(e){}return{appointmentId:a.appointmentId,accountPatient:{firstName:a.firstName,lastName:a.lastName,accountPatientId:a.accountPatientId},appointmentType:null,appointmentStatus:a.status,startUnix:a.startUnix}}));for(const d of details){const p=d.accountPatient||{};const pid=p.accountPatientId;if(!pid)continue;const t=d.appointmentType||{};const typeName=t.name||'';const cat=CAT(typeName);const visitDate=d.startUnix?(d.startUnix>9999999999?new Date(d.startUnix):new Date(d.startUnix*1000)).toISOString().split('T')[0]:null;if(!patientMap[pid]){patientMap[pid]={patient_id:pid,patient_name:((p.firstName||'')+' '+(p.lastName||'')).trim(),visits:[],noShows:0,cancellations:0,services:new Set()}}const pm=patientMap[pid];pm.services.add(cat);if(visitDate)pm.visits.push({date:visitDate,type:typeName,category:cat,status:d.appointmentStatus});if(d.appointmentStatus===6)pm.noShows++;if(d.appointmentStatus===7||d.appointmentStatus===8)pm.cancellations++}done+=batch.length;if(done%50===0)o.textContent='Processing '+done+'/'+allAppts.length+'...'}o.textContent='Building patient profiles...';const records=[];const todayStr=now.toISOString().split('T')[0];for(const[pid,pm]of Object.entries(patientMap)){const sorted=pm.visits.filter(v=>v.date).sort((a,b)=>b.date.localeCompare(a.date));const lastVisit=sorted.length?sorted[0].date:null;const daysSince=lastVisit?Math.floor((now-new Date(lastVisit+'T00:00:00'))/(1000*60*60*24)):999;const completedVisits=sorted.filter(v=>v.status===5||v.status===3||v.status===1||v.status===0);const svcs=Array.from(pm.services).filter(s=>s!=='other'&&s!=='consult'&&s!=='labs');records.push({location_slug:'troy',patient_id:parseInt(pid),patient_name:pm.patient_name,total_visits_90d:completedVisits.length,last_visit_date:lastVisit,days_since_last_visit:daysSince,no_shows_90d:pm.noShows,cancellations_90d:pm.cancellations,primary_service:svcs.length?svcs[0]:'unknown',all_services:svcs.join(','),visit_dates:sorted.slice(0,10).map(v=>v.date).join(','),synced_at:new Date().toISOString()})}o.textContent='Saving '+records.length+' patient profiles...';await fetch(SU+'/patient_visit_history?location_slug=eq.troy',{method:'DELETE',headers:sh});for(let i=0;i<records.length;i+=50){await fetch(SU+'/patient_visit_history',{method:'POST',headers:{...sh,'Prefer':'return=minimal'},body:JSON.stringify(records.slice(i,i+50))})}const atRisk=records.filter(r=>r.days_since_last_visit>30).length;const noShowers=records.filter(r=>r.no_shows_90d>0).length;o.innerHTML='<b>Synced '+records.length+' patients!</b><br><span style="font-size:12px;opacity:0.9">'+atRisk+' inactive (30+ days) | '+noShowers+' with no-shows</span>';o.style.background='#16a34a';setTimeout(()=>o.remove(),6000)}catch(e){o.style.background='#cc0000';o.textContent='Error: '+e.message;setTimeout(()=>o.remove(),8000)}})())`;
 
+    // ===== BACKFILL 7 DAYS BOOKMARKLET CODE =====
+    // Loops through the last 7 days running the daily sync logic for each.
+    // Same Lobbie endpoints + same Supabase target as the daily sync.
+    const backfillCode = `javascript:void((async()=>{const W='https://n8n.alphaclinicai.com/webhook/lobbie-sync',B='https://api-prod.lobbie.com/lobbie/api/secure/v1',SU='https://sjyvvemjldsbiguyfkdp.supabase.co/rest/v1',SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw',LI=1379,I=[765,766,767,768,820];function C(t){if(!t)return'other';const l=t.toLowerCase();if(l.includes('initial consult')||l.includes('consult - no lab'))return'consult';if(l.includes('trt')||l.includes('testosterone')||l.includes('pellet')||l.includes('starting trt'))return'trt';if(l.includes('semaglutide')||l.includes('tirzepatide')||l.includes('glp')||l.includes('phentermine'))return'glp1';if(l.includes('gaineswave')||l.includes('gainswave'))return'gaineswave';if(l.includes('p-shot')||l.includes('p shot')||l.includes('trimix'))return'pshot';if(l.includes('peptide')||l.includes('hgh'))return'peptides';if(l.includes('lab')||l.includes('vitals'))return'labs';if(l.includes('vitamin')||l.includes('b12'))return'vitamin_shots';if(l.includes('consult')||l.includes('follow up')||l.includes('telehealth'))return'consult';return'other'}function S(c){return{0:'Scheduled',1:'Confirmed',3:'Checked In',5:'Checked Out',6:'No Show'}[c]||'Unknown'}const sh={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'};let o=document.getElementById('ls-ov');if(!o){o=document.createElement('div');o.id='ls-ov';o.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;padding:16px 24px;border-radius:12px;font-family:sans-serif;font-size:14px;color:white;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:420px;background:#7c3aed';document.body.appendChild(o)}try{if(!location.hostname.includes('lobbie.com')){o.style.background='#cc0000';o.innerHTML='Open <a href="https://my.lobbie.com" style="color:#fff;text-decoration:underline">my.lobbie.com</a> first';setTimeout(()=>o.remove(),5000);return}let TA=0,TB=0;const today=new Date();for(let dOff=6;dOff>=0;dOff--){const target=new Date(today.getFullYear(),today.getMonth(),today.getDate()-dOff);const ds=target.toISOString().split('T')[0];o.textContent='Day '+(7-dOff)+'/7 ('+ds+')...';try{const sr=await fetch(B+'/staff/scheduling/search',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({schedulerConfigIds:I,startDateTime:new Date(target.getFullYear(),target.getMonth(),target.getDate(),4,0,0).toISOString(),endDateTime:new Date(target.getFullYear(),target.getMonth(),target.getDate()+1,3,59,59).toISOString()})});const sd=await sr.json();let aa=[];(sd.schedules||[]).forEach(s=>aa=aa.concat(s.appointments||[]));const da=[];for(let i=0;i<aa.length;i+=5){const r=await Promise.all(aa.slice(i,i+5).map(async a=>{try{const r=await fetch(B+'/staff/scheduling/appointment/'+a.appointmentId,{credentials:'include'});if(r.ok)return r.json()}catch(e){}return{appointmentId:a.appointmentId,accountPatient:{firstName:a.firstName,lastName:a.lastName,accountPatientId:a.accountPatientId},appointmentType:null,appointmentStatus:a.status,schedulerConfigId:a.schedulerConfigId,startUnix:a.startUnix}}));da.push(...r)}const ap=da.map(d=>{const p=d.accountPatient||{},t=d.appointmentType||{},n=t.name||'';return{location_slug:'troy',date:ds,appointment_id:d.appointmentId,patient_name:((p.firstName||'')+' '+(p.lastName||'')).trim(),patient_first_name:p.firstName||'',patient_last_name:p.lastName||'',patient_id:p.accountPatientId||null,appointment_type:n,appointment_type_id:t.id||null,service_category:C(n),scheduler_config_id:d.schedulerConfigId,status:d.appointmentStatus,status_label:S(d.appointmentStatus),start_time:d.startUnix?new Date(d.startUnix*1000).toISOString():null,duration:t.duration||d.duration||null,practitioner_id:d.practitionerId||null,note:d.note||null}});const cc={};ap.forEach(a=>cc[a.service_category]=(cc[a.service_category]||0)+1);let bi=[];try{let ti=[],pg=0,go=true;while(go){const ir=await fetch(B+'/staff/revenue-sentinel/invoices/search',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({locationId:LI,rowsPerPage:100,pageNumber:pg})});const id=await ir.json();const rs=id.searchResults||[];if(!rs.length){go=false;break}ti=ti.concat(rs.filter(i=>i.createdDateISO&&i.createdDateISO.startsWith(ds)&&i.totalAmountCents>0));if(rs.some(i=>i.createdDateISO&&!i.createdDateISO.startsWith(ds)&&i.createdDateISO<ds)||rs.length<100)go=false;pg++;if(pg>=20)go=false}for(let i=0;i<ti.length;i+=5){const dt=await Promise.all(ti.slice(i,i+5).map(async inv=>{try{const r=await fetch(B+'/staff/revenue-sentinel/invoices/'+inv.id,{credentials:'include'});if(r.ok)return{inv,d:await r.json()}}catch(e){}return{inv,d:null}}));for(const{inv,d}of dt){if(!d||!d.lineItems)continue;for(const li of d.lineItems){if(li.serviceRecurrenceType)continue;const sd=li.serviceDetails||{};if(sd.recurrenceType||sd.frequency>0)continue;bi.push({location_slug:'troy',date:ds,invoice_id:inv.id,invoice_number:inv.invoiceNumber,patient_name:inv.patientName,patient_id:inv.accountPatientId,line_item_name:li.careResourceName,line_item_type:li.careResourceType,amount_cents:li.totalAmountCents,billing_code:sd.billingCode||null,invoice_status:(inv.statuses||[]).join(','),invoice_total_cents:inv.totalAmountCents})}}}}catch(e){console.warn('Billing error '+ds+':',e)}if(bi.length>0){await fetch(SU+'/billing_items?location_slug=eq.troy&date=eq.'+ds,{method:'DELETE',headers:sh});await fetch(SU+'/billing_items',{method:'POST',headers:{...sh,'Prefer':'return=minimal'},body:JSON.stringify(bi)})}await fetch(W,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:ds,location:'troy',appointmentCount:ap.length,appointments:ap,billingItemCount:bi.length,categoryCounts:cc,syncedAt:new Date().toISOString(),backfill:true})});TA+=ap.length;TB+=bi.length}catch(e){console.warn('Day '+ds+' failed:',e)}}o.innerHTML='<b>Backfilled 7 days!</b><br>'+TA+' appts + '+TB+' products synced';o.style.background='#16a34a';setTimeout(()=>o.remove(),6000)}catch(e){o.style.background='#cc0000';o.textContent='Error: '+e.message;setTimeout(()=>o.remove(),8000)}})())`;
+
+    // ===== FRESHNESS CHECK (runs on page load) =====
+    (async function checkFreshness() {
+      const SUPA = 'https://sjyvvemjldsbiguyfkdp.supabase.co/rest/v1';
+      const SK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw';
+      const headers = { apikey: SK, Authorization: 'Bearer ' + SK };
+      try {
+        const [apptRes, billRes, pvhRes] = await Promise.all([
+          fetch(`${SUPA}/appointments?location_slug=eq.troy&order=date.desc&limit=1&select=date`, { headers }),
+          fetch(`${SUPA}/billing_items?location_slug=eq.troy&order=date.desc&limit=1&select=date`, { headers }),
+          fetch(`${SUPA}/patient_visit_history?location_slug=eq.troy&order=synced_at.desc&limit=1&select=synced_at`, { headers })
+        ]);
+        const [appt, bill, pvh] = await Promise.all([apptRes.json(), billRes.json(), pvhRes.json()]);
+        const apptDate = (appt[0] || {}).date;
+        const billDate = (bill[0] || {}).date;
+        const pvhDate  = ((pvh[0] || {}).synced_at || '').slice(0, 10);
+        const today = new Date().toISOString().slice(0, 10);
+        function daysAgo(d) {
+          if (!d) return null;
+          const diff = (new Date(today) - new Date(d)) / (1000 * 60 * 60 * 24);
+          return Math.round(diff);
+        }
+        const apptAgo = daysAgo(apptDate);
+        const billAgo = daysAgo(billDate);
+        const pvhAgo  = daysAgo(pvhDate);
+        function status(n, label) {
+          if (n === null) return `<span style="color:#6b7280">— ${label}: unknown</span>`;
+          if (n === 0) return `<span style="color:#16a34a">✅ ${label}: today</span>`;
+          if (n === 1) return `<span style="color:#16a34a">✅ ${label}: yesterday</span>`;
+          if (n <= 3) return `<span style="color:#d97706">⚠ ${label}: ${n} days ago — run daily sync</span>`;
+          return `<span style="color:#dc2626">🚨 ${label}: ${n} days ago — STALE, run backfill</span>`;
+        }
+        const card = document.getElementById('freshness-card');
+        const body = document.getElementById('freshness-body');
+        body.innerHTML = [
+          status(apptAgo, 'Appointments'),
+          status(billAgo, 'Billing items'),
+          status(pvhAgo,  'Patient visit history')
+        ].join('<br>');
+        const worst = Math.max(apptAgo || 0, billAgo || 0, pvhAgo || 0);
+        if (worst > 3) {
+          card.style.borderLeftColor = '#dc2626';
+        } else if (worst > 1) {
+          card.style.borderLeftColor = '#d97706';
+        } else {
+          card.style.borderLeftColor = '#16a34a';
+        }
+        card.style.display = 'block';
+      } catch (e) {
+        console.warn('Freshness check failed:', e);
+      }
+    })();
+
     // Set bookmarklet links
     document.getElementById('daily-link').href = dailyCode;
     document.getElementById('daily-code').textContent = dailyCode;
+    document.getElementById('backfill-link').href = backfillCode;
+    document.getElementById('backfill-code').textContent = backfillCode;
     document.getElementById('clinical-link').href = clinicalCode;
     document.getElementById('clinical-code').textContent = clinicalCode;
 
