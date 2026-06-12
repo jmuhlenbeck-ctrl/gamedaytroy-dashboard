@@ -383,6 +383,46 @@
     }
   });
 
+  // Demo mode auto-unlocks for screenshot capture (anonymized data only),
+  // then switches to the Lead Pipeline tab for a content-rich view.
+  if (new URLSearchParams(location.search).get('demo') === '1') {
+    document.getElementById('pinOverlay').classList.add('hidden');
+    document.getElementById('mainContent').style.display = '';
+    loadAll().then(() => { try { showTab('leads'); } catch (e) {} });
+  }
+
+  // Demo/screenshot mode: ?demo=1 bypasses PIN and anonymizes real business
+  // names + contact info so marketing screenshots never expose actual leads.
+  const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+  function anonymize(list) {
+    const labelFor = (cat) => {
+      const c = (cat || '').toLowerCase();
+      if (c.includes('financ') || c.includes('wealth')) return 'Wealth Management Firm';
+      if (c.includes('account')) return 'Accounting Practice';
+      if (c.includes('insurance')) return 'Insurance Agency';
+      if (c.includes('law') || c.includes('attorney')) return 'Law Office';
+      if (c.includes('real estate')) return 'Real Estate Group';
+      if (c.includes('dental')) return 'Dental Practice';
+      if (c.includes('fitness') || c.includes('gym')) return 'Fitness Studio';
+      return 'Local Business';
+    };
+    const cats = ['Financial Services', 'Insurance Agency', 'Accounting', 'Law Office', 'Real Estate', 'Consulting'];
+    return (list || []).map((r, i) => {
+      const n = String(i + 1).padStart(2, '0');
+      return {
+        ...r,
+        business_name: `${labelFor(r.category)} ${n}`,
+        category: r.category || cats[i % cats.length],
+        email: `contact@business${n}.com`,
+        phone: '(248) 555-0' + String(100 + (i % 900)),
+        website: `https://business${n}.com`,
+        rating: r.rating || (4.2 + (i % 8) / 10).toFixed(1),
+        user_ratings_total: r.user_ratings_total || (12 + (i * 7) % 180),
+        status: r.status || 'qualified',
+      };
+    });
+  }
+
   async function loadAll() {
     try {
       const res = await fetch(WEBHOOK_URL);
@@ -391,6 +431,12 @@
       outreachLeads = data.outreach || [];
       pendingItems = data.pending || [];
       sentItems = data.sentLog || [];
+      if (DEMO) {
+        rawLeads = anonymize(rawLeads);
+        outreachLeads = anonymize(outreachLeads);
+        pendingItems = anonymize(pendingItems);
+        sentItems = anonymize(sentItems);
+      }
     } catch (e) {
       console.error('API error:', e);
       rawLeads = []; outreachLeads = []; pendingItems = []; sentItems = [];
@@ -440,7 +486,9 @@
 
   function renderPending() {
     const container = document.getElementById('pendingList');
-    const items = pendingItems.filter(r => r.status === 'pending');
+    // Items in the pending array are pending by definition; only exclude ones
+    // explicitly marked approved/rejected. (Older rows carry no status field.)
+    const items = pendingItems.filter(r => !r.status || r.status === 'pending');
 
     if (items.length === 0) {
       container.innerHTML = `<div class="empty-state"><h3>No drafts pending</h3><p>When Agent 14.4a drafts outreach emails, they'll appear here for your review. You can approve or reject each one.</p></div>`;
