@@ -1595,6 +1595,17 @@
     btn.innerHTML = isOpen ? `Show all ${total} &#x25BC;` : 'Show less &#x25B2;';
   };
 
+  // Toggle for Keyword Trends table expand/collapse
+  window.toggleKwRows = function() {
+    const extras = document.querySelectorAll('tr.kw-extra');
+    const btn = document.getElementById('kw-toggle');
+    if (!extras.length || !btn) return;
+    const isOpen = extras[0].style.display !== 'none';
+    extras.forEach(r => { r.style.display = isOpen ? 'none' : ''; });
+    const total = extras.length + 8;
+    btn.innerHTML = isOpen ? `Show all ${total} &#x25BC;` : 'Show less &#x25B2;';
+  };
+
   // Toggle for Retention Tracker list expand/collapse (per-tab)
   window.toggleRtList = function(hiddenId, btnId, total) {
     const hidden = document.getElementById(hiddenId);
@@ -1974,7 +1985,7 @@
     // Scale the bar to the top result so the chart is readable
     const max = sorted[0].total || 1;
 
-    tbody.innerHTML = sorted.map(k => {
+    const rowHtml = (k, extra) => {
       const pct = Math.max(2, Math.round((k.total / max) * 100));
       const barColor = pct >= 70 ? 'var(--success)' : pct >= 40 ? 'var(--warning)' : 'var(--text-dim)';
       // Format month YYYY-MM as 'Mon YYYY'
@@ -1987,7 +1998,7 @@
         }
       }
       const thresholdNote = k.isThreshold ? '<span title="Some months were below Google\'s privacy floor; real total is at least this." style="color:var(--text-dim);">*</span>' : '';
-      return `<tr>
+      return `<tr${extra ? ' class="kw-extra" style="display:none;"' : ''}>
         <td style="font-weight:600;">${escHtml(k.query)}</td>
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
@@ -1999,7 +2010,16 @@
         </td>
         <td style="font-size:0.75rem;color:var(--text-dim);">${monthLabel}</td>
       </tr>`;
-    }).join('');
+    };
+
+    // Collapse to the top 8 with a "Show all N" toggle (matches retention tracker)
+    const INITIAL_KW = 8;
+    const visible = sorted.slice(0, INITIAL_KW).map(k => rowHtml(k, false)).join('');
+    const hidden = sorted.slice(INITIAL_KW).map(k => rowHtml(k, true)).join('');
+    const toggle = sorted.length > INITIAL_KW
+      ? `<tr class="kw-toggle-row"><td colspan="3" style="text-align:center;padding:10px;"><button id="kw-toggle" onclick="toggleKwRows()" style="padding:8px 18px;background:var(--card);border:1px solid var(--border);border-radius:999px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">Show all ${sorted.length} &#x25BC;</button></td></tr>`
+      : '';
+    tbody.innerHTML = visible + hidden + toggle;
   }
 
   function renderSEOPosts(posts) {
