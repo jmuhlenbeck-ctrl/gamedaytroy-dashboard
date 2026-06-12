@@ -109,6 +109,11 @@
       }
     });
 
+    // Demo mode for screenshot capture — bypasses PIN (no PHI on this page)
+    if (new URLSearchParams(location.search).get('demo') === '1') {
+      pinOverlay.classList.add('hidden'); loadMetrics();
+    }
+
     const fmtMonth = mk => {
       const [y,m] = mk.split('-');
       return new Date(parseInt(y), parseInt(m)-1, 1).toLocaleDateString('en-US', { month:'short', year:'numeric' }).toUpperCase();

@@ -872,6 +872,12 @@
         </div>
       </div>
 
+      <div class="rt-tabs" id="tag-tabs" style="display:none;">
+        <button class="rt-tab active" data-tagtab="top" onclick="switchTagTab('top')">Top Converters</button>
+        <button class="rt-tab" data-tagtab="attention" onclick="switchTagTab('attention')">Needs Attention</button>
+        <button class="rt-tab" data-tagtab="all" onclick="switchTagTab('all')">All Tags</button>
+      </div>
+
       <div class="trend-card" id="tag-table-wrap" style="display:none;">
         <table class="trend-table">
           <thead>
@@ -887,6 +893,7 @@
           </thead>
           <tbody id="tag-analytics-body"></tbody>
         </table>
+        <div id="tag-table-note" style="text-align:center;color:var(--text-dim);font-size:0.75rem;padding:10px;"></div>
       </div>
     </div>
 
@@ -2394,28 +2401,63 @@
 
       document.getElementById('tag-empty').style.display = 'none';
       document.getElementById('tag-table-wrap').style.display = '';
+      document.getElementById('tag-tabs').style.display = '';
 
-      document.getElementById('tag-analytics-body').innerHTML = rows.map(r => {
-        const pct = Number(r.conversion_pct || 0);
-        const pctColor = pct >= 50 ? 'var(--success)' : pct >= 25 ? 'var(--warning)' : 'var(--danger)';
-        const noShow = Number(r.no_show_count || 0);
-        const cancelled = Number(r.cancelled_count || 0);
-        const totalLeads = Number(r.total_leads || 0);
-        const showRate = totalLeads > 0 ? ((totalLeads - noShow - cancelled) / totalLeads * 100) : 0;
-        const showColor = showRate >= 80 ? 'var(--success)' : showRate >= 60 ? 'var(--warning)' : 'var(--danger)';
-        return '<tr>' +
-          '<td style="font-weight:500;">' + (r.tag || '--') + '</td>' +
-          '<td>' + totalLeads + '</td>' +
-          '<td>' + (r.won_total || 0) + '</td>' +
-          '<td style="color:var(--danger);font-weight:500;">' + noShow + '</td>' +
-          '<td style="color:var(--warning);font-weight:500;">' + cancelled + '</td>' +
-          '<td style="color:' + pctColor + ';font-weight:600;">' + pct.toFixed(1) + '%</td>' +
-          '<td style="color:' + showColor + ';font-weight:600;">' + showRate.toFixed(1) + '%</td>' +
-          '</tr>';
-      }).join('');
+      // Cache all rows + render the default tab (top converters)
+      window.__tagRows = rows;
+      renderTagTable('top');
     } catch (e) {
       document.getElementById('tag-empty').textContent = 'Error loading tag analytics: ' + e.message;
     }
+  }
+
+  const TAG_TOP_N = 10;
+  function renderTagTable(mode) {
+    const all = (window.__tagRows || []).map(r => {
+      const noShow = Number(r.no_show_count || 0);
+      const cancelled = Number(r.cancelled_count || 0);
+      const totalLeads = Number(r.total_leads || 0);
+      return {
+        tag: r.tag || '--',
+        totalLeads, won: Number(r.won_total || 0), noShow, cancelled,
+        pct: Number(r.conversion_pct || 0),
+        showRate: totalLeads > 0 ? ((totalLeads - noShow - cancelled) / totalLeads * 100) : 0,
+      };
+    });
+
+    let rows = all, note = '';
+    if (mode === 'top') {
+      // Highest conversion %, meaningful volume only (>=5 leads)
+      rows = all.filter(r => r.totalLeads >= 5).sort((a, b) => b.pct - a.pct).slice(0, TAG_TOP_N);
+      note = `Top ${rows.length} tags by conversion rate (5+ leads). Switch to "All Tags" for the full list.`;
+    } else if (mode === 'attention') {
+      // Most no-shows + cancellations
+      rows = all.filter(r => (r.noShow + r.cancelled) > 0).sort((a, b) => (b.noShow + b.cancelled) - (a.noShow + a.cancelled)).slice(0, TAG_TOP_N);
+      note = `Top ${rows.length} tags driving no-shows & cancellations — where to focus.`;
+    } else {
+      rows = all.slice().sort((a, b) => b.won - a.won);
+      note = `All ${rows.length} tags, sorted by won total.`;
+    }
+
+    document.getElementById('tag-analytics-body').innerHTML = rows.map(r => {
+      const pctColor = r.pct >= 50 ? 'var(--success)' : r.pct >= 25 ? 'var(--warning)' : 'var(--danger)';
+      const showColor = r.showRate >= 80 ? 'var(--success)' : r.showRate >= 60 ? 'var(--warning)' : 'var(--danger)';
+      return '<tr>' +
+        '<td style="font-weight:500;">' + r.tag + '</td>' +
+        '<td>' + r.totalLeads + '</td>' +
+        '<td>' + r.won + '</td>' +
+        '<td style="color:var(--danger);font-weight:500;">' + r.noShow + '</td>' +
+        '<td style="color:var(--warning);font-weight:500;">' + r.cancelled + '</td>' +
+        '<td style="color:' + pctColor + ';font-weight:600;">' + r.pct.toFixed(1) + '%</td>' +
+        '<td style="color:' + showColor + ';font-weight:600;">' + r.showRate.toFixed(1) + '%</td>' +
+        '</tr>';
+    }).join('');
+    document.getElementById('tag-table-note').textContent = note;
+  }
+
+  function switchTagTab(mode) {
+    document.querySelectorAll('#tag-tabs .rt-tab').forEach(b => b.classList.toggle('active', b.dataset.tagtab === mode));
+    renderTagTable(mode);
   }
 
   // ── Revenue Trend Chart ──
