@@ -1040,6 +1040,26 @@
     loadDashboard(val);
   }
 
+  // Demo/screenshot mode: ?demo=1 bypasses PIN and anonymizes patient + reviewer
+  // names at the fetch chokepoint so marketing screenshots never expose PHI.
+  const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+  const DEMO_FIRST = ['James','Michael','Robert','David','William','Richard','Thomas','Mark','Daniel','Paul','Steven','Kevin','Brian','Eric','Jason','Jeff','Greg','Scott','Tony','Chris'];
+  const DEMO_LAST = ['M.','R.','B.','K.','S.','D.','H.','T.','P.','L.','C.','G.','W.','F.','N.','A.','V.','J.','O.','E.'];
+  function demoName(seed) {
+    let h = 0; for (let i = 0; i < (seed||'').length; i++) h = (h*31 + seed.charCodeAt(i)) >>> 0;
+    return DEMO_FIRST[h % DEMO_FIRST.length] + ' ' + DEMO_LAST[(h >>> 5) % DEMO_LAST.length];
+  }
+  function demoAnonymize(data) {
+    if (!Array.isArray(data)) return data;
+    return data.map(row => {
+      if (!row || typeof row !== 'object') return row;
+      const r = { ...row };
+      if (r.patient_name) r.patient_name = demoName(r.patient_name);
+      if (r.reviewer_name && r.reviewer_name !== 'Anonymous') r.reviewer_name = demoName(r.reviewer_name);
+      return r;
+    });
+  }
+
   async function supaFetch(table, query) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
       headers: {
@@ -1047,7 +1067,24 @@
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     });
-    return res.json();
+    const data = await res.json();
+    return DEMO ? demoAnonymize(data) : data;
+  }
+
+  // Demo mode auto-unlocks for anonymized screenshot capture.
+  // ?month=YYYY-MM loads a specific month (default: month-to-date).
+  // Deferred to window load so all dashboard globals are initialized first.
+  if (DEMO) {
+    window.addEventListener('load', () => {
+      document.getElementById('pin-overlay').classList.add('hidden');
+      document.getElementById('quick-links').style.display = '';
+      document.getElementById('header').style.display = '';
+      document.getElementById('main-content').style.display = '';
+      document.getElementById('footer').style.display = '';
+      const mp = new URLSearchParams(location.search).get('month');
+      try { const ms = document.getElementById('month-select'); if (ms && mp) ms.value = 'month:' + mp; } catch (e) {}
+      loadDashboard(mp ? 'month:' + mp : 'mtd');
+    });
   }
 
   function $(amt) {
