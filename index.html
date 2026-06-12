@@ -2439,10 +2439,10 @@
       note = `All ${rows.length} tags, sorted by won total.`;
     }
 
-    document.getElementById('tag-analytics-body').innerHTML = rows.map(r => {
+    const rowHtml = (r, extra) => {
       const pctColor = r.pct >= 50 ? 'var(--success)' : r.pct >= 25 ? 'var(--warning)' : 'var(--danger)';
       const showColor = r.showRate >= 80 ? 'var(--success)' : r.showRate >= 60 ? 'var(--warning)' : 'var(--danger)';
-      return '<tr>' +
+      return '<tr' + (extra ? ' class="tag-extra" style="display:none;"' : '') + '>' +
         '<td style="font-weight:500;">' + r.tag + '</td>' +
         '<td>' + r.totalLeads + '</td>' +
         '<td>' + r.won + '</td>' +
@@ -2451,9 +2451,27 @@
         '<td style="color:' + pctColor + ';font-weight:600;">' + r.pct.toFixed(1) + '%</td>' +
         '<td style="color:' + showColor + ';font-weight:600;">' + r.showRate.toFixed(1) + '%</td>' +
         '</tr>';
-    }).join('');
+    };
+    // Collapse long lists to 10 with a "Show all N" toggle (matches retention tracker)
+    const INITIAL = 10;
+    const visible = rows.slice(0, INITIAL).map(r => rowHtml(r, false)).join('');
+    const hidden = rows.slice(INITIAL).map(r => rowHtml(r, true)).join('');
+    const toggle = rows.length > INITIAL
+      ? '<tr class="tag-toggle-row"><td colspan="7" style="text-align:center;padding:10px;"><button id="tag-toggle" onclick="toggleTagRows()" style="padding:8px 18px;background:var(--card);border:1px solid var(--border);border-radius:999px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;">Show all ' + rows.length + ' &#x25BC;</button></td></tr>'
+      : '';
+    document.getElementById('tag-analytics-body').innerHTML = visible + hidden + toggle;
     document.getElementById('tag-table-note').textContent = note;
   }
+
+  window.toggleTagRows = function() {
+    const extras = document.querySelectorAll('tr.tag-extra');
+    const btn = document.getElementById('tag-toggle');
+    if (!extras.length || !btn) return;
+    const isOpen = extras[0].style.display === 'table-row';
+    extras.forEach(tr => tr.style.display = isOpen ? 'none' : 'table-row');
+    const match = btn.textContent.match(/\d+/);
+    btn.innerHTML = isOpen ? `Show all ${match ? match[0] : ''} &#x25BC;` : 'Show less &#x25B2;';
+  };
 
   function switchTagTab(mode) {
     document.querySelectorAll('#tag-tabs .rt-tab').forEach(b => b.classList.toggle('active', b.dataset.tagtab === mode));
