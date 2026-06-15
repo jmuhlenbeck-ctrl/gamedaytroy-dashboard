@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ordering — Gameday Men's Health</title>
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a1a2e; --accent: #cc0000;
+      --bg: #f4f5f7; --card: #ffffff; --text: #1a1a2e;
+      --text-muted: #6b7a99; --text-dim: #9ca3af; --border: rgba(0,0,0,0.08);
+      --success: #16a34a; --warning: #d97706; --danger: #cc0000;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08); --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+    .quick-links-bar { background: var(--primary); padding: 8px 20px; display: flex; gap: 4px; align-items: center; position: sticky; top: 0; z-index: 100; overflow-x: auto; }
+    .quick-link { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7); text-decoration: none; white-space: nowrap; transition: all 0.15s; }
+    .quick-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .quick-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+    .pin-overlay { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+    .pin-overlay.hidden { display: none; }
+    .pin-overlay h2 { font-size: 1.5rem; margin-bottom: 8px; color: var(--primary); }
+    .pin-overlay p { color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; }
+    .pin-input { width: 200px; padding: 14px; font-size: 2rem; text-align: center; border: 2px solid var(--border); border-radius: var(--radius); letter-spacing: 12px; font-family: inherit; outline: none; }
+    .pin-input:focus { border-color: var(--accent); }
+    .pin-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none; }
+    .header { background: var(--primary); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .header-left h1 { color: #fff; font-size: 1.25rem; font-weight: 700; }
+    .header-left p { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-top: 2px; }
+    .refresh-btn { background: rgba(255,255,255,0.12); border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; color: #fff; font-family: inherit; font-size: 0.8rem; font-weight: 600; }
+    .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+    .main { max-width: 1280px; margin: 0 auto; padding: 20px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+    .kpi { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; }
+    .kpi .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; }
+    .kpi .value { font-size: 1.8rem; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .kpi.red .value { color: var(--danger); }
+    .kpi.amber .value { color: var(--warning); }
+    .kpi.grey .value { color: var(--text-dim); }
+    @media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+    .controls { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .rt-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+    .rt-tab { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text-muted); font-size: 0.82rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .rt-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .rt-tab .count { opacity: 0.7; margin-left: 4px; }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin-left: auto; }
+    .seg button { padding: 7px 14px; border: none; background: var(--card); color: var(--text-muted); font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .seg button.active { background: var(--primary); color: #fff; }
+    .table-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; }
+    table.rt { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 0.88rem; }
+    table.rt th, table.rt td { padding: 12px 14px; text-align: left; white-space: nowrap; }
+    table.rt thead th { background: var(--primary); color: #fff; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    table.rt tbody tr { border-bottom: 1px solid var(--border); }
+    table.rt tbody tr:hover { background: #fafbfc; }
+    .due-pill { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .due-overdue { color: var(--danger); }
+    .due-soon { color: var(--warning); }
+    .due-ok { color: var(--text-dim); }
+    .tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; background: #eef1f6; color: var(--primary); }
+    .deliv-mail { background: #dbeafe; color: #1e40af; }
+    .deliv-office { background: #d1fae5; color: #065f46; }
+    .deliv-other { background: #f3f4f6; color: #4b5563; }
+    .note { color: var(--text-muted); font-size: 0.78rem; margin-top: 14px; line-height: 1.6; }
+    .loading { text-align: center; padding: 60px; color: var(--text-muted); }
+    .toggle-btn { display: block; margin: 14px auto 4px; padding: 8px 18px; background: var(--card); border: 1px solid var(--border); border-radius: 999px; color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div class="pin-overlay" id="pinOverlay">
+    <h2>Gameday Troy</h2>
+    <p>Enter PIN to continue</p>
+    <input class="pin-input" id="pinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off">
+    <div class="pin-error" id="pinError">Incorrect PIN</div>
+  </div>
+
+  <nav class="quick-links-bar">
+    <a href="index.html" class="quick-link">Dashboard</a>
+    <a href="monthly.html" class="quick-link">Monthly</a>
+    <a href="ordering.html" class="quick-link active">Ordering</a>
+    <a href="https://tasks.alphaclinicai.com" class="quick-link" target="_blank">Tasks</a>
+    <a href="marketing.html" class="quick-link">Marketing</a>
+    <a href="patients.html" class="quick-link">Retention</a>
+    <a href="outreach.html" class="quick-link">Outreach</a>
+    <a href="health-scores.html" class="quick-link">Health Scores</a>
+  </nav>
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Ordering — Reorder Board</h1>
+      <p id="headerSub">Synced from the Troy Patient Census</p>
+    </div>
+    <button class="refresh-btn" onclick="loadBoard()">↻ Refresh</button>
+  </div>
+
+  <div class="main">
+    <div class="kpis" id="kpis"></div>
+    <div class="controls">
+      <div class="rt-tabs" id="tabs"></div>
+      <div class="seg" id="deliv">
+        <button data-d="all" class="active">All</button>
+        <button data-d="Mail Out">📬 Mail Out</button>
+        <button data-d="In-Office">🏥 In-Office</button>
+      </div>
+    </div>
+    <div class="table-card"><div id="tableHost" class="loading">Loading…</div></div>
+    <div class="note" id="sourceNote"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw';
+    const LOCATION = 'troy';
+    const PIN = '1234';
+    const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+    const OVERDUE_GRACE = 5;   // overdue by more than this many days => "review (likely inactive)"
+    const SOON = 7;            // due within this many days => part of "Due Now"
+
+    const pinOverlay = document.getElementById('pinOverlay');
+    const pinInput = document.getElementById('pinInput');
+    const pinError = document.getElementById('pinError');
+    if (DEMO || sessionStorage.getItem('gd_pin_ok') === '1') pinOverlay.classList.add('hidden');
+    else pinInput.focus();
+    pinInput.addEventListener('input', () => {
+      if (pinInput.value.length === 4) {
+        if (pinInput.value === PIN) { sessionStorage.setItem('gd_pin_ok','1'); pinOverlay.classList.add('hidden'); loadBoard(); }
+        else { pinError.style.display='block'; pinInput.value=''; setTimeout(()=>pinError.style.display='none',2000); }
+      }
+    });
+
+    const DEMO_FIRST = ['James','Michael','Robert','David','William','Richard','Joseph','Thomas','Charles','Daniel','Matthew','Anthony','Mark','Donald','Steven','Paul','Andrew','Joshua','Kevin','Brian'];
+    const DEMO_LAST = ['M.','R.','B.','D.','W.','H.','S.','T.','C.','L.','G.','A.','P.','K.','J.','N.','F.','V.','E.','Z.'];
+    function demoName(seed){ let h=0; for(let i=0;i<(seed||'').length;i++) h=(h*31+seed.charCodeAt(i))>>>0; return DEMO_FIRST[h%DEMO_FIRST.length]+' '+DEMO_LAST[(h>>>5)%DEMO_LAST.length]; }
+
+    const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+    const fmtDate = d => d ? new Date(d+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}) : '—';
+    const daysTo = d => d ? Math.round((new Date(d+'T00:00:00')-TODAY)/86400000) : null;
+
+    let ROWS = [], TAB = 'due', DELIV = 'all';
+
+    function bucketOf(r){
+      const d = daysTo(r.next_due_date);
+      if (d === null) return 'upcoming';
+      if (d < -OVERDUE_GRACE) return 'review';
+      if (d <= SOON) return 'due';
+      return 'upcoming';
+    }
+
+    async function loadBoard(){
+      const host = document.getElementById('tableHost');
+      host.className='loading'; host.textContent='Loading…';
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/reorder_tracker?location_slug=eq.${LOCATION}&order=next_due_date.asc&select=*`,
+          { headers:{ apikey:SUPABASE_KEY, Authorization:'Bearer '+SUPABASE_KEY }});
+        ROWS = await res.json();
+        if (!Array.isArray(ROWS)) ROWS = [];
+        if (DEMO) ROWS = ROWS.map(r => ({...r, patient_name: demoName(r.patient_name||r.patient_key)}));
+        render();
+        const synced = ROWS[0] && ROWS[0].synced_at ? new Date(ROWS[0].synced_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+        document.getElementById('headerSub').textContent = `Synced from the Troy Patient Census · ${ROWS.length} active meds · last sync ${synced}`;
+        document.getElementById('sourceNote').innerHTML =
+          'Mirrors your <b>Troy Patient Census</b>. <b>Next due</b> = last mailed + cadence (TRT/peptides 28 days; Tirzepatide 56 days low-dose, 28 higher). '+
+          `<b>Due Now</b> = due within ${SOON} days or up to ${OVERDUE_GRACE} days late. <b>Review</b> = more than ${OVERDUE_GRACE} days late (likely an inactive patient still on the roster — clean up in the census). `+
+          'Update the census when you mail and it drops off here on the next sync.';
+      } catch(e){ host.className=''; host.innerHTML=`<div class="loading">Failed to load: ${e.message}</div>`; }
+    }
+
+    function render(){ renderKPIs(); renderTabs(); renderDeliv(); renderTable(); }
+
+    function renderKPIs(){
+      const due = ROWS.filter(r=>bucketOf(r)==='due');
+      const overdue = due.filter(r=>daysTo(r.next_due_date)<0);
+      const upcoming = ROWS.filter(r=>bucketOf(r)==='upcoming');
+      const review = ROWS.filter(r=>bucketOf(r)==='review');
+      document.getElementById('kpis').innerHTML = `
+        <div class="kpi red"><div class="label">Overdue (≤${OVERDUE_GRACE}d)</div><div class="value">${overdue.length}</div></div>
+        <div class="kpi amber"><div class="label">Due now</div><div class="value">${due.length}</div></div>
+        <div class="kpi"><div class="label">Upcoming</div><div class="value">${upcoming.length}</div></div>
+        <div class="kpi grey"><div class="label">Review (inactive?)</div><div class="value">${review.length}</div></div>`;
+    }
+    function renderTabs(){
+      const c = {due:0,upcoming:0,review:0,all:ROWS.length};
+      ROWS.forEach(r=>{ c[bucketOf(r)]++; });
+      const defs = [['due','Due Now',c.due],['upcoming','Upcoming',c.upcoming],['review','Review',c.review],['all','All',c.all]];
+      document.getElementById('tabs').innerHTML = defs.map(([k,l,n])=>
+        `<button class="rt-tab ${TAB===k?'active':''}" onclick="setTab('${k}')">${l}<span class="count">${n}</span></button>`).join('');
+    }
+    function renderDeliv(){
+      document.querySelectorAll('#deliv button').forEach(b=>b.classList.toggle('active', b.dataset.d===DELIV));
+    }
+    window.setTab = k => { TAB=k; render(); };
+    document.getElementById('deliv').addEventListener('click', e => {
+      const b = e.target.closest('button'); if(!b) return; DELIV=b.dataset.d; render();
+    });
+
+    function delivTag(d){
+      const cls = d==='Mail Out'?'deliv-mail':(d==='In-Office'?'deliv-office':'deliv-other');
+      const icon = d==='Mail Out'?'📬':(d==='In-Office'?'🏥':'');
+      return `<span class="tag ${cls}">${icon} ${d||'—'}</span>`;
+    }
+
+    function renderTable(){
+      const host = document.getElementById('tableHost');
+      let rows = ROWS.filter(r => TAB==='all' ? true : bucketOf(r)===TAB);
+      if (DELIV !== 'all') rows = rows.filter(r => (r.delivery||'')===DELIV);
+      if (!rows.length){ host.className=''; host.innerHTML='<div class="loading">Nothing here. 🎉</div>'; return; }
+      const rowHtml = (r,extra) => {
+        const d = daysTo(r.next_due_date);
+        let cls='due-ok', txt=fmtDate(r.next_due_date);
+        if (d!==null){ if(d<0){cls='due-overdue';txt+=` · ${Math.abs(d)}d late`;} else if(d<=SOON){cls='due-soon';txt+=` · in ${d}d`;} else {txt+=` · in ${d}d`;} }
+        return `<tr${extra?' class="rt-extra" style="display:none;"':''}>
+          <td style="font-weight:600;">${esc(r.patient_name||'—')}</td>
+          <td><span class="tag">${esc(r.therapy||'—')}</span></td>
+          <td>${esc(r.dose||'')}</td>
+          <td>${delivTag(r.delivery)}</td>
+          <td>${fmtDate(r.last_mailed_date)}</td>
+          <td><span class="due-pill ${cls}">${txt}</span></td>
+        </tr>`;
+      };
+      const INITIAL = 20;
+      const vis = rows.slice(0,INITIAL).map(r=>rowHtml(r,false)).join('');
+      const hid = rows.slice(INITIAL).map(r=>rowHtml(r,true)).join('');
+      const toggle = rows.length>INITIAL
+        ? `<tr><td colspan="6" style="padding:0;"><button class="toggle-btn" id="rt-toggle" onclick="toggleRows()">Show all ${rows.length} &#x25BC;</button></td></tr>`:'';
+      host.className='';
+      host.innerHTML = `<table class="rt"><thead><tr>
+        <th>Patient</th><th>Therapy</th><th>Dose</th><th>Delivery</th><th>Last Mailed</th><th>Next Due</th>
+      </tr></thead><tbody>${vis}${hid}${toggle}</tbody></table>`;
+    }
+    window.toggleRows = function(){
+      const ex=document.querySelectorAll('tr.rt-extra'); const btn=document.getElementById('rt-toggle');
+      if(!ex.length||!btn) return; const open=ex[0].style.display!=='none';
+      ex.forEach(r=>r.style.display=open?'none':''); btn.innerHTML=open?`Show all ${ex.length+20} &#x25BC;`:'Show less &#x25B2;';
+    };
+    function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    if (DEMO || sessionStorage.getItem('gd_pin_ok')==='1') loadBoard();
+  </script>
+</body>
+</html>
