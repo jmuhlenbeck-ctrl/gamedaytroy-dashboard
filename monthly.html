@@ -207,24 +207,22 @@
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
         const [ovR, prR] = await Promise.all([
-          fetch(`${SUPABASE_URL}/rest/v1/attrition_patient_overall?location_slug=eq.${LOCATION}&order=snapshot_month.asc`, { headers: H }),
-          fetch(`${SUPABASE_URL}/rest/v1/attrition_patient_product?location_slug=eq.${LOCATION}&order=snapshot_month.asc`, { headers: H })
+          fetch(`${SUPABASE_URL}/rest/v1/attrition_patient_overall?location_slug=eq.${LOCATION}`, { headers: H }),
+          fetch(`${SUPABASE_URL}/rest/v1/attrition_patient_product?location_slug=eq.${LOCATION}`, { headers: H })
         ]);
         const ov = await ovR.json(), pr = await prR.json();
-        if (!Array.isArray(ov) || !ov.length) { host.className=''; host.innerHTML = '<div class="loading">No attrition snapshots yet.</div>'; return; }
-        const months = [...new Set(ov.map(r => r.snapshot_month))].sort();
-        const latest = months[months.length-1], prev = months.length>1?months[months.length-2]:null;
-        const label = { trt:'TRT', glp1:'GLP-1', peptides:'Peptides', pshot:'P-Shot', gaineswave:'GAINSWave', vitamin_shots:'Vitamin Shots', other:'Other', untagged:'Untagged' };
-        const order = ['trt','glp1','peptides','pshot','gaineswave','vitamin_shots','other','untagged'];
-        const rowHtml = (name,a,p,c,bold) => { const base=a+p+c; const cR=base?c/base*100:0, pR=base?p/base*100:0; const nm=bold?`<b>${name}</b>`:name; return `<tr><td class="metric">${nm}</td><td class="num">${a}</td><td class="num">${p}</td><td class="num">${c}</td><td class="num"><span class="${cR>=25?'neg':(cR>0?'':'muted')}">${cR.toFixed(1)}%</span></td><td class="num muted">${pR.toFixed(1)}%</td></tr>`; };
-        const o = ov.find(r => r.snapshot_month === latest) || {active:0,paused:0,cancelled:0};
-        let html = '<table class="mm"><thead><tr><th class="metric-head">ACTIVE PATIENTS</th><th>ACTIVE</th><th>PAUSED</th><th>CANCELLED</th><th>CANCEL %</th><th>PAUSE %</th></tr></thead><tbody>';
-        html += rowHtml('All patients', o.active, o.paused, o.cancelled, true);
-        const pm = pr.filter(r => r.snapshot_month === latest);
-        order.forEach(prod => { const row = pm.find(r => r.product === prod); if (row) html += rowHtml(label[prod]||prod, row.active, row.paused, row.cancelled, false); });
+        if (!Array.isArray(ov) || !ov.length) { host.className=''; host.innerHTML = '<div class="loading">No attrition data yet.</div>'; return; }
+        const label = { trt:'TRT', glp1:'GLP-1', peptides:'Peptides' };
+        const order = ['trt','glp1','peptides'];
+        const cls = v => (+v)>=10 ? 'neg' : ((+v)>0 ? '' : 'muted');
+        const row = (name,a,c,bold) => `<tr><td class="metric">${bold?`<b>${name}</b>`:name}</td><td class="num">${Number(a).toLocaleString()}</td><td class="num"><span class="${cls(c)}">${Number(c).toFixed(1)}%/mo</span></td></tr>`;
+        const o = ov[0];
+        let html = '<table class="mm"><thead><tr><th class="metric-head">MEMBERSHIP</th><th>ACTIVE PATIENTS</th><th>MONTHLY CHURN</th></tr></thead><tbody>';
+        html += row('All patients', o.active, o.monthly_churn_pct, true);
+        order.forEach(pp => { const r = pr.find(x => x.product === pp); if (r) html += row(label[pp], r.active, r.monthly_churn_pct, false); });
         html += '</tbody></table>';
         host.className=''; host.innerHTML = html;
-        document.getElementById('attritionNote').innerHTML = `<b>Active</b> = current patients from your Troy census (source of truth, in-office patients included). <b>Cancelled/Paused</b> = churn. For TRT &amp; Peptides that comes from lapsed MX subscriptions; for GLP-1 (package-based) it's the census 3-month rule — no purchase in 3 months = lapsed. Updated nightly.`;
+        document.getElementById('attritionNote').innerHTML = `<b>Active</b> = current patients from your Troy census (source of truth, in-office included). <b>Monthly churn</b> = share of members lapsing per month (trailing avg). TRT &amp; Peptides from MX recurring payments; GLP-1 from the census 3-month rule (no purchase in 3 months = lapsed). Updated nightly.`;
       } catch (e) { host.className=''; host.innerHTML = `<div class="loading">Attrition failed: ${e.message}</div>`; }
     }
 
