@@ -205,26 +205,29 @@
     async function loadAttrition() {
       const host = document.getElementById('attritionHost');
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/subscription_snapshots?location_slug=eq.${LOCATION}&select=snapshot_month,product,status`, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
-        const rows = await res.json();
-        if (!Array.isArray(rows) || !rows.length) { host.className=''; host.innerHTML = '<div class="loading">No attrition snapshots yet.</div>'; return; }
-        const CH = ['Active','Inactive','Cancelled'];
-        const months = [...new Set(rows.map(r => r.snapshot_month))].sort();
-        const latest = months[months.length - 1], prev = months.length>1?months[months.length-2]:null;
-        const cur = rows.filter(r => r.snapshot_month === latest && CH.includes(r.status));
-        const label = { trt:'TRT', glp1:'GLP-1', peptides:'Peptides', pshot:'P-Shot', gaineswave:'GAINSWave', vitamin_shots:'Vitamin Shots', other:'Other' };
-        const order = ['trt','glp1','peptides','pshot','gaineswave','vitamin_shots','other'];
-        const agg = arr => { const a={Active:0,Inactive:0,Cancelled:0}; arr.forEach(r=>{ if(a[r.status]!==undefined) a[r.status]++; }); return a; };
-        const rowHtml = (name, arr, bold) => { const a=agg(arr), base=a.Active+a.Inactive+a.Cancelled; const cR=base?a.Cancelled/base*100:0, pR=base?a.Inactive/base*100:0; const nm=bold?`<b>${name}</b>`:name; return `<tr><td class="metric">${nm}</td><td class="num">${a.Active}</td><td class="num">${a.Inactive}</td><td class="num">${a.Cancelled}</td><td class="num"><span class="${cR>=25?'neg':(cR>0?'':'muted')}">${cR.toFixed(1)}%</span></td><td class="num muted">${pR.toFixed(1)}%</td></tr>`; };
-        let html = '<table class="mm"><thead><tr><th class="metric-head">RECURRING MEMBERSHIPS</th><th>ACTIVE</th><th>PAUSED</th><th>CANCELLED</th><th>CANCEL %</th><th>PAUSE %</th></tr></thead><tbody>';
-        html += rowHtml('All products', cur, true);
-        order.forEach(p => { const pr = cur.filter(r => r.product === p); if (pr.length) html += rowHtml(label[p]||p, pr, false); });
-        const unt = cur.filter(r => !r.product); if (unt.length) html += rowHtml('<span class="muted">Untagged</span>', unt, false);
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const [ovR, prR] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/attrition_patient_overall?location_slug=eq.${LOCATION}&order=snapshot_month.asc`, { headers: H }),
+          fetch(`${SUPABASE_URL}/rest/v1/attrition_patient_product?location_slug=eq.${LOCATION}&order=snapshot_month.asc`, { headers: H })
+        ]);
+        const ov = await ovR.json(), pr = await prR.json();
+        if (!Array.isArray(ov) || !ov.length) { host.className=''; host.innerHTML = '<div class="loading">No attrition snapshots yet.</div>'; return; }
+        const months = [...new Set(ov.map(r => r.snapshot_month))].sort();
+        const latest = months[months.length-1], prev = months.length>1?months[months.length-2]:null;
+        const label = { trt:'TRT', glp1:'GLP-1', peptides:'Peptides', pshot:'P-Shot', gaineswave:'GAINSWave', vitamin_shots:'Vitamin Shots', other:'Other', untagged:'Untagged' };
+        const order = ['trt','glp1','peptides','pshot','gaineswave','vitamin_shots','other','untagged'];
+        const rowHtml = (name,a,p,c,bold) => { const base=a+p+c; const cR=base?c/base*100:0, pR=base?p/base*100:0; const nm=bold?`<b>${name}</b>`:name; return `<tr><td class="metric">${nm}</td><td class="num">${a}</td><td class="num">${p}</td><td class="num">${c}</td><td class="num"><span class="${cR>=25?'neg':(cR>0?'':'muted')}">${cR.toFixed(1)}%</span></td><td class="num muted">${pR.toFixed(1)}%</td></tr>`; };
+        const o = ov.find(r => r.snapshot_month === latest) || {active:0,paused:0,cancelled:0};
+        let html = '<table class="mm"><thead><tr><th class="metric-head">RECURRING PATIENTS</th><th>ACTIVE</th><th>PAUSED</th><th>CANCELLED</th><th>CANCEL %</th><th>PAUSE %</th></tr></thead><tbody>';
+        html += rowHtml('All patients', o.active, o.paused, o.cancelled, true);
+        const pm = pr.filter(r => r.snapshot_month === latest);
+        order.forEach(prod => { const row = pm.find(r => r.product === prod); if (row) html += rowHtml(label[prod]||prod, row.active, row.paused, row.cancelled, false); });
         html += '</tbody></table>';
         host.className=''; host.innerHTML = html;
-        document.getElementById('attritionNote').innerHTML = `Recurring subscription status from <b>MXMerchant contracts</b>, snapshot <b>${fmtMonth(latest)}</b>. "Cancelled" = ended · "Paused" = inactive · completed packages &amp; voids excluded. Product tags fill in as the Lobbie sync runs — <em>Untagged</em> = members without a product match yet. ` + (prev ? `Comparing to ${fmtMonth(prev)}.` : `Month-over-month rate begins once a second monthly snapshot lands.`);
+        document.getElementById('attritionNote').innerHTML = `Distinct <b>patients</b> by recurring-membership status (MXMerchant contracts, deduped per patient), snapshot <b>${fmtMonth(latest)}</b>. A patient is Active if they hold any active recurring plan. "Cancelled" = fully lapsed · "Paused" = inactive. ` + (prev ? `Comparing to ${fmtMonth(prev)}.` : `Month-over-month rate begins once a second monthly snapshot lands.`);
       } catch (e) { host.className=''; host.innerHTML = `<div class="loading">Attrition failed: ${e.message}</div>`; }
     }
+
   </script>
 </body>
 </html>
