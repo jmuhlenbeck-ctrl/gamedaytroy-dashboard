@@ -224,7 +224,7 @@
         order.forEach(prod => { const row = pm.find(r => r.product === prod); if (row) html += rowHtml(label[prod]||prod, row.active, row.paused, row.cancelled, false); });
         html += '</tbody></table>';
         host.className=''; host.innerHTML = html;
-        document.getElementById('attritionNote').innerHTML = `<b>Active</b> = current patients from your Troy census (source of truth). <b>Paused/Cancelled</b> = patients whose recurring MX subscription lapsed and who are no longer on the census. Snapshot <b>${fmtMonth(latest)}</b>. Note: GLP-1 sells as prepaid packages (not monthly subscriptions), so MX can't measure its churn — that column reads 0 by design.`;
+        document.getElementById('attritionNote').innerHTML = `<b>Active</b> = current patients from your Troy census (source of truth, in-office patients included). <b>Cancelled/Paused</b> = churn. For TRT &amp; Peptides that comes from lapsed MX subscriptions; for GLP-1 (package-based) it's the census 3-month rule — no purchase in 3 months = lapsed. Updated nightly.`;
       } catch (e) { host.className=''; host.innerHTML = `<div class="loading">Attrition failed: ${e.message}</div>`; }
     }
 
