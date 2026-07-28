@@ -218,13 +218,13 @@
         const order = ['trt','glp1','peptides','pshot','gaineswave','vitamin_shots','other','untagged'];
         const rowHtml = (name,a,p,c,bold) => { const base=a+p+c; const cR=base?c/base*100:0, pR=base?p/base*100:0; const nm=bold?`<b>${name}</b>`:name; return `<tr><td class="metric">${nm}</td><td class="num">${a}</td><td class="num">${p}</td><td class="num">${c}</td><td class="num"><span class="${cR>=25?'neg':(cR>0?'':'muted')}">${cR.toFixed(1)}%</span></td><td class="num muted">${pR.toFixed(1)}%</td></tr>`; };
         const o = ov.find(r => r.snapshot_month === latest) || {active:0,paused:0,cancelled:0};
-        let html = '<table class="mm"><thead><tr><th class="metric-head">RECURRING PATIENTS</th><th>ACTIVE</th><th>PAUSED</th><th>CANCELLED</th><th>CANCEL %</th><th>PAUSE %</th></tr></thead><tbody>';
+        let html = '<table class="mm"><thead><tr><th class="metric-head">ACTIVE PATIENTS</th><th>ACTIVE</th><th>PAUSED</th><th>CANCELLED</th><th>CANCEL %</th><th>PAUSE %</th></tr></thead><tbody>';
         html += rowHtml('All patients', o.active, o.paused, o.cancelled, true);
         const pm = pr.filter(r => r.snapshot_month === latest);
         order.forEach(prod => { const row = pm.find(r => r.product === prod); if (row) html += rowHtml(label[prod]||prod, row.active, row.paused, row.cancelled, false); });
         html += '</tbody></table>';
         host.className=''; host.innerHTML = html;
-        document.getElementById('attritionNote').innerHTML = `Distinct <b>patients</b> by recurring-membership status (MXMerchant contracts, deduped per patient), snapshot <b>${fmtMonth(latest)}</b>. A patient is Active if they hold any active recurring plan. "Cancelled" = fully lapsed · "Paused" = inactive. ` + (prev ? `Comparing to ${fmtMonth(prev)}.` : `Month-over-month rate begins once a second monthly snapshot lands.`);
+        document.getElementById('attritionNote').innerHTML = `<b>Active</b> = current patients from your Troy census (source of truth). <b>Paused/Cancelled</b> = patients whose recurring MX subscription lapsed and who are no longer on the census. Snapshot <b>${fmtMonth(latest)}</b>. Note: GLP-1 sells as prepaid packages (not monthly subscriptions), so MX can't measure its churn — that column reads 0 by design.`;
       } catch (e) { host.className=''; host.innerHTML = `<div class="loading">Attrition failed: ${e.message}</div>`; }
     }
 
