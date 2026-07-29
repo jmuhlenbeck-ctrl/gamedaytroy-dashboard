@@ -137,7 +137,7 @@
     // Refresh = recompute the current/recent months from MX+GHL (via the rollup
     // webhook), then re-read. Without this, the button only re-read cached data,
     // so same-day numbers never changed and it looked like nothing happened.
-    const ROLLUP_WEBHOOK = 'https://n8n.alphaclinicai.com/webhook/monthly-rollup';
+    const ROLLUP_WEBHOOK = 'https://n8n.alphaclinicai.com/webhook/refresh-all'; // fires ALL syncs
     async function refreshNow() {
       const btn = document.getElementById('refreshBtn');
       const orig = btn.innerHTML;
@@ -149,8 +149,9 @@
         }
       } catch (e) { /* fall through to re-read either way */ }
       await loadMetrics();
-      btn.innerHTML = '✓ Updated';
-      setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1600);
+      btn.innerHTML = '✓ Syncing all… (~1 min)';
+      if (!demo) setTimeout(() => loadMetrics(), 75000);
+      setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 4000);
     }
 
     async function loadMetrics() {
