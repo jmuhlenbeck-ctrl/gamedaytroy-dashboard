@@ -248,7 +248,7 @@
       const SL = {
         revenue: [96891,93925,124033,124799,127937,133293,146294,null,null,null,null,null],
         goals:   ['100k','100k','100k','130k','130k','135k','140k','150k',null,null,null,null],
-        noshows: [28,9,14,14,19,20,16,13,null,null,null,null],
+        noshows: [35,13,17,18,24,20,16,13,null,null,null,null],
         census:  [310,316,353,368,395,410,414,419,null,null,null,null],
         starts:  [28,28,37,32,32,33,28,5,null,null,null,null],
         cancels: [5,25,7,15,9,24,22,1,null,null,null,null],
@@ -316,7 +316,7 @@
       html += '</tbody></table>';
       host.className = ''; host.innerHTML = html;
       document.getElementById('stoplightNote').innerHTML =
-        `<b>P-Shot / GW</b> and <b>No-shows</b> are <span style="color:var(--success);font-weight:700;">live</span>. P-Shot/GW = combined P-Shot + GaineWave + performance-package revenue from MXMerchant QuickPay memos and Lobbie invoices (${liveMonths} months synced). No-shows = new-consult no-shows from Lobbie's Consults scheduler (Starting TRT, Semaglutide/Tirzepatide, P-Shot consult, HGH Peptides no-lab; excludes GAINSWave, PRP &amp; labs). Both update automatically. All other rows are transcribed from the 2026 Stoplight tracker. MoM growth is computed from Revenue MTD (Dec 2025 base $97,387).`;
+        `<b>P-Shot / GW</b> and <b>No-shows</b> are <span style="color:var(--success);font-weight:700;">live</span>. P-Shot/GW = combined P-Shot + GaineWave + performance-package revenue from MXMerchant QuickPay memos and Lobbie invoices (${liveMonths} months synced). No-shows = new-consult no-shows from Lobbie's Consults scheduler (Starting TRT, Semaglutide/Tirzepatide, P-Shot consult, GaineWave consult, HGH Peptides no-lab; excludes PRP &amp; lab consults). Both update automatically. All other rows are transcribed from the 2026 Stoplight tracker. MoM growth is computed from Revenue MTD (Dec 2025 base $97,387).`;
     }
 
   </script>
