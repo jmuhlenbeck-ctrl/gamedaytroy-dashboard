@@ -248,7 +248,7 @@
       const SL = {
         revenue: [96891,93925,124033,124799,127937,133293,146294,null,null,null,null,null],
         goals:   ['100k','100k','100k','130k','130k','135k','140k','150k',null,null,null,null],
-        noshows: [38,14,17,null,null,null,null,null,null,null,null,null],
+        noshows: [28,9,14,14,19,20,16,13,null,null,null,null],
         census:  [310,316,353,368,395,410,414,419,null,null,null,null],
         starts:  [28,28,37,32,32,33,28,5,null,null,null,null],
         cancels: [5,25,7,15,9,24,22,1,null,null,null,null],
@@ -266,6 +266,14 @@
         const rows = await r.json();
         (rows || []).forEach(x => { const p = x.month.slice(0,7).split('-'); if (p[0] === '2026') { SL.pshotgw[parseInt(p[1])-1] = x.total_cents/100; liveMonths++; } });
       } catch (e) { /* keep static fallback values */ }
+      // live new-consult no-shows (Consults scheduler: Starting TRT / Sema-Tirz / P-Shot / HGH Peptides no-lab)
+      try {
+        const nr = await fetch(`${SUPABASE_URL}/rest/v1/monthly_noshows?select=month,no_shows&order=month.asc`, {
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+        });
+        const nrows = await nr.json();
+        (nrows || []).forEach(x => { const p = x.month.slice(0,7).split('-'); if (p[0] === '2026') SL.noshows[parseInt(p[1])-1] = x.no_shows; });
+      } catch (e) { /* keep static fallback */ }
       const total = MO.map((_, i) => { const parts = [SL.prp[i], SL.pshotgw[i], SL.weight[i], SL.hgh[i]]; return parts.every(x => x == null) ? null : parts.reduce((s, x) => s + (x || 0), 0); });
       const mom = SL.revenue.map((v, i) => { if (v == null) return null; const prev = i === 0 ? DEC_PREV : SL.revenue[i-1]; return prev ? (v - prev) / prev * 100 : null; });
       const m0 = v => v == null ? '' : '$' + Math.round(v).toLocaleString();
@@ -281,7 +289,7 @@
         { label: 'Total census', d: SL.census, f: i0 },
         { label: 'Starts', d: SL.starts, f: i0 },
         { label: 'Cancels', d: SL.cancels, f: i0 },
-        { label: 'No-shows', d: SL.noshows, f: i0 },
+        { label: 'No-shows (new consult)', d: SL.noshows, f: i0, live: true },
         { sec: 'High Tickets (MTD)' },
         { label: 'PRP Hair', d: SL.prp, f: m0 },
         { label: 'P-Shot / GW', d: SL.pshotgw, f: m0, cls: 'val-rev', live: true },
@@ -308,7 +316,7 @@
       html += '</tbody></table>';
       host.className = ''; host.innerHTML = html;
       document.getElementById('stoplightNote').innerHTML =
-        `<b>P-Shot / GW</b> is <span style="color:var(--success);font-weight:700;">live</span> — combined P-Shot + GaineWave + performance-package revenue from MXMerchant QuickPay memos and Lobbie invoices (${liveMonths} months synced), updated automatically. All other rows are transcribed from the 2026 Stoplight tracker. MoM growth is computed from Revenue MTD (Dec 2025 base $97,387).`;
+        `<b>P-Shot / GW</b> and <b>No-shows</b> are <span style="color:var(--success);font-weight:700;">live</span>. P-Shot/GW = combined P-Shot + GaineWave + performance-package revenue from MXMerchant QuickPay memos and Lobbie invoices (${liveMonths} months synced). No-shows = new-consult no-shows from Lobbie's Consults scheduler (Starting TRT, Semaglutide/Tirzepatide, P-Shot consult, HGH Peptides no-lab; excludes GAINSWave, PRP &amp; labs). Both update automatically. All other rows are transcribed from the 2026 Stoplight tracker. MoM growth is computed from Revenue MTD (Dec 2025 base $97,387).`;
     }
 
   </script>
