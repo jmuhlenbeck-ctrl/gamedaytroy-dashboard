@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRT Lab Gaps — Gameday Men's Health</title>
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1a1a2e; --accent: #cc0000;
+      --bg: #f4f5f7; --card: #ffffff; --text: #1a1a2e;
+      --text-muted: #6b7a99; --text-dim: #9ca3af; --border: rgba(0,0,0,0.08);
+      --success: #16a34a; --warning: #d97706; --danger: #cc0000;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08); --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
+    .quick-links-bar { background: var(--primary); padding: 8px 20px; display: flex; gap: 4px; align-items: center; position: sticky; top: 0; z-index: 100; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .quick-link { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7); text-decoration: none; white-space: nowrap; transition: all 0.15s; }
+    .quick-link:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .quick-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+    .pin-overlay { position: fixed; inset: 0; background: #fff; z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+    .pin-overlay.hidden { display: none; }
+    .pin-overlay h2 { font-size: 1.5rem; margin-bottom: 8px; color: var(--primary); }
+    .pin-overlay p { color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; }
+    .pin-input { width: 200px; padding: 14px; font-size: 2rem; text-align: center; border: 2px solid var(--border); border-radius: var(--radius); letter-spacing: 12px; font-family: inherit; outline: none; }
+    .pin-input:focus { border-color: var(--accent); }
+    .pin-error { color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none; }
+    .header { background: var(--primary); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .header-left h1 { color: #fff; font-size: 1.25rem; font-weight: 700; }
+    .header-left p { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-top: 2px; }
+    .refresh-btn { background: rgba(255,255,255,0.12); border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; color: #fff; font-family: inherit; font-size: 0.8rem; font-weight: 600; }
+    .main { max-width: 1280px; margin: 0 auto; padding: 20px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; border-left: 4px solid var(--primary); }
+    .stat .lbl { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+    .stat .val { font-size: 1.6rem; font-weight: 800; margin-top: 3px; }
+    .stat.overdue { border-left-color: var(--danger); } .stat.overdue .val { color: var(--danger); }
+    .stat.soon { border-left-color: var(--warning); } .stat.soon .val { color: var(--warning); }
+    .stat.ok { border-left-color: var(--success); } .stat.ok .val { color: var(--success); }
+    .section-title { font-size: 1.05rem; font-weight: 700; color: var(--primary); margin: 24px 0 10px; }
+    .table-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; }
+    table.mm { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 0.88rem; }
+    table.mm th, table.mm td { padding: 11px 14px; text-align: left; white-space: nowrap; }
+    table.mm thead th { background: var(--primary); color: #fff; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; }
+    table.mm tbody tr { border-bottom: 1px solid var(--border); }
+    table.mm tbody tr:nth-child(even) { background: #fafbfc; }
+    .num { font-variant-numeric: tabular-nums; text-align: right; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+    .p-red { background: rgba(204,0,0,0.1); color: var(--danger); }
+    .p-amber { background: rgba(217,119,6,0.12); color: var(--warning); }
+    .p-grey { background: rgba(107,122,153,0.12); color: var(--text-muted); }
+    .p-green { background: rgba(22,163,74,0.12); color: var(--success); }
+    .note { color: var(--text-muted); font-size: 0.78rem; margin-top: 12px; line-height: 1.6; }
+    .loading { text-align: center; padding: 50px; color: var(--text-muted); }
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tab { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-family: inherit; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  </style>
+</head>
+<body>
+  <div class="pin-overlay" id="pinOverlay">
+    <h2>Gameday Troy</h2>
+    <p>Enter PIN to continue</p>
+    <input class="pin-input" id="pinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off">
+    <div class="pin-error" id="pinError">Incorrect PIN</div>
+  </div>
+
+  <nav class="quick-links-bar">
+    <a href="index.html" class="quick-link">Dashboard</a>
+    <a href="monthly.html" class="quick-link">Monthly</a>
+    <a href="https://tasks.alphaclinicai.com" class="quick-link" target="_blank">Tasks</a>
+    <a href="marketing.html" class="quick-link">Marketing</a>
+    <a href="patients.html" class="quick-link">Retention</a>
+    <a href="labs.html" class="quick-link active">Labs</a>
+    <a href="outreach.html" class="quick-link">Outreach</a>
+    <a href="health-scores.html" class="quick-link">Health Scores</a>
+    <a href="lobbie-sync.html" class="quick-link">Lobbie Sync</a>
+  </nav>
+
+  <div class="header">
+    <div class="header-left">
+      <h1>TRT Lab Gaps</h1>
+      <p id="headerSub">Gameday Men's Health — Troy</p>
+    </div>
+    <button class="refresh-btn" onclick="load()">↻ Reload</button>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats"></div>
+    <div class="tabs">
+      <button class="tab active" data-v="need" onclick="setView('need')">Needs labs booked</button>
+      <button class="tab" data-v="coming" onclick="setView('coming')">Coming in anyway</button>
+      <button class="tab" data-v="inactive" onclick="setView('inactive')">Verify / census cleanup</button>
+      <button class="tab" data-v="booked" onclick="setView('booked')">Labs booked</button>
+    </div>
+    <div class="table-card"><div id="host" class="loading">Loading…</div></div>
+    <div class="note" id="note"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://sjyvvemjldsbiguyfkdp.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqeXZ2ZW1qbGRzYmlndXlma2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODU4MzYsImV4cCI6MjA5MDU2MTgzNn0.0h3e1-Spj8EcILHXByF_hDgRvdKnrUe9ZAZyBTowGJw';
+    const PIN = '1234';
+
+    const pinOverlay = document.getElementById('pinOverlay');
+    const pinInput = document.getElementById('pinInput');
+    const pinError = document.getElementById('pinError');
+    if (sessionStorage.getItem('gd_pin_ok') === '1') { pinOverlay.classList.add('hidden'); load(); }
+    else { pinInput.focus(); }
+    pinInput.addEventListener('input', () => {
+      if (pinInput.value.length === 4) {
+        if (pinInput.value === PIN) { sessionStorage.setItem('gd_pin_ok','1'); pinOverlay.classList.add('hidden'); load(); }
+        else { pinError.style.display='block'; pinInput.value=''; setTimeout(()=>pinError.style.display='none',2000); }
+      }
+    });
+    if (new URLSearchParams(location.search).get('demo') === '1') { pinOverlay.classList.add('hidden'); load(); }
+
+    let ROWS = [], VIEW = 'need';
+    const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+
+    function overduePill(days) {
+      if (days == null) return '<span class="pill p-grey">no lab on record</span>';
+      if (days >= 365) return '<span class="pill p-red">' + days + ' days</span>';
+      if (days >= 180) return '<span class="pill p-amber">' + days + ' days</span>';
+      return '<span class="pill p-grey">' + days + ' days</span>';
+    }
+
+    function setView(v) {
+      VIEW = v;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.v === v));
+      render();
+    }
+
+    async function load() {
+      const host = document.getElementById('host');
+      host.className = 'loading'; host.textContent = 'Loading…';
+      try {
+        const r = await fetch(SUPABASE_URL + '/rest/v1/v_trt_lab_gaps?select=*', {
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
+        });
+        ROWS = await r.json();
+        if (!Array.isArray(ROWS)) throw new Error('bad response');
+        renderStats(); render();
+      } catch (e) { host.className=''; host.innerHTML = '<div class="loading">Failed to load: ' + e.message + '</div>'; }
+    }
+
+    function buckets() {
+      const active = ROWS.filter(r => !r.likely_inactive);
+      return {
+        need: active.filter(r => !r.has_upcoming_lab && !r.has_other_appt),
+        coming: active.filter(r => !r.has_upcoming_lab && r.has_other_appt),
+        booked: active.filter(r => r.has_upcoming_lab),
+        inactive: ROWS.filter(r => r.likely_inactive)
+      };
+    }
+
+    function renderStats() {
+      const b = buckets();
+      const gap = b.need.length + b.coming.length;
+      const over6m = b.need.concat(b.coming).filter(r => r.days_since_lab != null && r.days_since_lab >= 180).length;
+      const noHist = b.need.concat(b.coming).filter(r => r.days_since_lab == null).length;
+      document.getElementById('stats').innerHTML =
+        '<div class="stat overdue"><div class="lbl">No labs booked</div><div class="val">' + gap + '</div></div>' +
+        '<div class="stat overdue"><div class="lbl">6+ months since labs</div><div class="val">' + over6m + '</div></div>' +
+        '<div class="stat"><div class="lbl">No lab history</div><div class="val">' + noHist + '</div></div>' +
+        '<div class="stat soon"><div class="lbl">Coming in anyway</div><div class="val">' + b.coming.length + '</div></div>' +
+        '<div class="stat ok"><div class="lbl">Labs booked</div><div class="val">' + b.booked.length + '</div></div>' +
+        '<div class="stat"><div class="lbl">Verify / cleanup</div><div class="val">' + b.inactive.length + '</div></div>';
+      const latest = ROWS.reduce((m, r) => (r.computed_at > m ? r.computed_at : m), '');
+      document.getElementById('headerSub').textContent =
+        "Gameday Men's Health — Troy · " + ROWS.length + ' active TRT patients · updated ' +
+        (latest ? new Date(latest).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—');
+    }
+
+    function render() {
+      const b = buckets();
+      let data = b[VIEW] || [];
+      const host = document.getElementById('host');
+      if (!data.length) { host.className=''; host.innerHTML = '<div class="loading">Nothing here.</div>'; return; }
+
+      if (VIEW === 'inactive') {
+        data = data.slice().sort((a,c) => (a.last_payment||'') .localeCompare(c.last_payment||''));
+      } else if (VIEW === 'booked') {
+        data = data.slice().sort((a,c) => (a.next_lab_date||'').localeCompare(c.next_lab_date||''));
+      } else {
+        // longest-overdue first; patients with no lab history at all go last
+        data = data.slice().sort((a,c) => (c.days_since_lab == null ? -1 : c.days_since_lab) - (a.days_since_lab == null ? -1 : a.days_since_lab));
+      }
+
+      let h = '<table class="mm"><thead><tr><th>#</th><th>Patient</th><th>Delivery</th>';
+      h += (VIEW === 'inactive') ? '<th>Last payment</th><th>Last lab</th>'
+         : (VIEW === 'booked')   ? '<th>Last lab</th><th>Next lab booked</th>'
+         : '<th>Last lab</th><th class="num">Overdue</th>';
+      h += '</tr></thead><tbody>';
+      data.forEach((r, i) => {
+        h += '<tr><td style="color:var(--text-dim)">' + (i+1) + '</td><td><b>' + r.patient_name + '</b></td><td>' + (r.delivery || '—') + '</td>';
+        if (VIEW === 'inactive') {
+          h += '<td>' + fmtDate(r.last_payment) + ' <span class="pill p-red">' + (r.days_since_payment != null ? r.days_since_payment + 'd ago' : 'none') + '</span></td><td>' + fmtDate(r.last_lab_date) + '</td>';
+        } else if (VIEW === 'booked') {
+          h += '<td>' + fmtDate(r.last_lab_date) + '</td><td><span class="pill p-green">' + fmtDate(r.next_lab_date) + '</span></td>';
+        } else {
+          h += '<td>' + fmtDate(r.last_lab_date) + '</td><td class="num">' + overduePill(r.days_since_lab) + '</td>';
+        }
+        h += '</tr>';
+      });
+      h += '</tbody></table>';
+      host.className=''; host.innerHTML = h;
+
+      const notes = {
+        need: 'Active TRT patients with <b>no lab appointment booked and nothing else scheduled</b> — these need a call. Sorted by longest since last labs.',
+        coming: 'No lab booked, but they already have an injection or consult on the calendar — <b>book labs while they are in the clinic</b>.',
+        booked: 'Labs already on the calendar. Nothing to do.',
+        inactive: 'Listed as active TRT on the census but <b>no payment in 90+ days and no upcoming appointment</b> — review these for removal from the census so they stop showing up on call lists.'
+      };
+      document.getElementById('note').innerHTML = notes[VIEW] +
+        ' &nbsp;·&nbsp; Lab history and upcoming appointments come from Lobbie (refreshed by the daily Lobbie Sync bookmarklet); payment activity comes from MXMerchant. ' +
+        'Patients are matched by name across systems.';
+    }
+  </script>
+</body>
+</html>
