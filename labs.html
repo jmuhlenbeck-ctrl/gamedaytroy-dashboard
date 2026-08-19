@@ -59,6 +59,9 @@
     .tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
     .tab { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-family: inherit; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
     .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    button.act { border: 1px solid var(--border); background: var(--card); color: var(--text-muted); border-radius: 7px; padding: 4px 10px; font-family: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer; }
+    button.act:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+    button.act:disabled { opacity: 0.5; cursor: default; }
   </style>
 </head>
 <body>
@@ -97,6 +100,7 @@
       <button class="tab" data-v="booked" onclick="setView('booked')">Labs booked</button>
       <button class="tab" data-v="ok" onclick="setView('ok')">Not due yet</button>
       <button class="tab" data-v="inactive" onclick="setView('inactive')">Verify / census cleanup</button>
+      <button class="tab" data-v="excluded" onclick="setView('excluded')">Removed</button>
     </div>
     <div class="table-card"><div id="host" class="loading">Loading…</div></div>
     <div class="note" id="note"></div>
@@ -157,14 +161,42 @@
     }
 
     function buckets() {
-      const active = ROWS.filter(r => !r.likely_inactive);
+      const live = ROWS.filter(r => !r.excluded);
+      const active = live.filter(r => !r.likely_inactive);
       return {
         overdue: active.filter(r => r.status === 'overdue'),
         soon: active.filter(r => r.status === 'due_soon'),
         booked: active.filter(r => r.status === 'scheduled'),
         ok: active.filter(r => r.status === 'ok' || r.status === 'unknown'),
-        inactive: ROWS.filter(r => r.likely_inactive)
+        inactive: live.filter(r => r.likely_inactive),
+        excluded: ROWS.filter(r => r.excluded)
       };
+    }
+
+    async function churn(key, name, btn) {
+      if (!confirm('Remove ' + name + ' from the lab list?\n\nThis only affects this page — the census is not changed. You can undo it from the "Removed" tab.')) return;
+      if (btn) { btn.disabled = true; btn.textContent = '…'; }
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/trt_excluded', {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([{ location_slug: 'troy', patient_key: key, patient_name: name, reason: 'no longer a patient' }])
+        });
+        if (!res.ok) throw new Error('save failed (' + res.status + ')');
+        await load();
+      } catch (e) { alert('Could not remove: ' + e.message); if (btn) { btn.disabled = false; btn.textContent = 'Remove'; } }
+    }
+
+    async function unchurn(key, name, btn) {
+      if (btn) { btn.disabled = true; btn.textContent = '…'; }
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/trt_excluded?location_slug=eq.troy&patient_key=eq.' + encodeURIComponent(key), {
+          method: 'DELETE',
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'return=minimal' }
+        });
+        if (!res.ok) throw new Error('undo failed (' + res.status + ')');
+        await load();
+      } catch (e) { alert('Could not restore: ' + e.message); if (btn) { btn.disabled = false; btn.textContent = 'Restore'; } }
     }
 
     function renderStats() {
@@ -199,21 +231,30 @@
       }
 
       let h = '<table class="mm"><thead><tr><th>#</th><th>Patient</th><th>Delivery</th>';
-      h += (VIEW === 'inactive') ? '<th>Last payment</th><th>Last lab</th>'
+      h += (VIEW === 'excluded') ? '<th>Removed</th><th>Reason</th>'
+         : (VIEW === 'inactive') ? '<th>Last payment</th><th>Last lab</th>'
          : (VIEW === 'booked')   ? '<th>Stage</th><th>Last lab</th><th>Next lab booked</th>'
          : '<th>Stage</th><th>Start</th><th>Last lab</th><th>Labs due</th><th class="num">Status</th>';
+      h += (VIEW === 'booked' || VIEW === 'ok') ? '' : '<th></th>';
       h += '</tr></thead><tbody>';
       data.forEach((r, i) => {
         h += '<tr><td style="color:var(--text-dim)">' + (i+1) + '</td><td><b>' + r.patient_name + '</b>'
            + (VIEW !== 'inactive' && VIEW !== 'booked' && r.has_other_appt ? ' <span class="pill p-amber">coming in</span>' : '')
            + '</td><td>' + (r.delivery || '—') + '</td>';
-        if (VIEW === 'inactive') {
+        if (VIEW === 'excluded') {
+          h += '<td>' + (r.excluded_reason ? '' : '') + fmtDate((r.computed_at||'').slice(0,10)) + '</td><td>' + (r.excluded_reason || '—') + '</td>';
+        } else if (VIEW === 'inactive') {
           h += '<td>' + fmtDate(r.last_payment) + ' <span class="pill p-red">' + (r.days_since_payment != null ? r.days_since_payment + 'd ago' : 'none') + '</span></td><td>' + fmtDate(r.last_lab_date) + '</td>';
         } else if (VIEW === 'booked') {
           h += '<td>' + stagePill(r.lab_stage) + '</td><td>' + fmtDate(r.last_lab_date) + '</td><td><span class="pill p-green">' + fmtDate(r.next_lab_date) + '</span></td>';
         } else {
           h += '<td>' + stagePill(r.lab_stage) + '</td><td>' + fmtDate(r.trt_start_date) + '</td><td>' + fmtDate(r.last_lab_date)
              + '</td><td>' + fmtDate(r.next_lab_due) + '</td><td class="num">' + overduePill(r.days_overdue) + '</td>';
+        }
+        if (VIEW === 'excluded') {
+          h += '<td><button class="act" onclick="unchurn(' + JSON.stringify(r.patient_key).replace(/"/g,'&quot;') + ',' + JSON.stringify(r.patient_name).replace(/"/g,'&quot;') + ',this)">Restore</button></td>';
+        } else if (VIEW !== 'booked' && VIEW !== 'ok') {
+          h += '<td><button class="act" onclick="churn(' + JSON.stringify(r.patient_key).replace(/"/g,'&quot;') + ',' + JSON.stringify(r.patient_name).replace(/"/g,'&quot;') + ',this)">Remove</button></td>';
         }
         h += '</tr>';
       });
@@ -225,7 +266,8 @@
         soon: 'Labs come due in the next 30 days and are not booked yet — get ahead of these.',
         booked: 'Labs already on the calendar. Nothing to do.',
         ok: 'Not due yet under the lab schedule.',
-        inactive: 'Listed as active TRT on the census but <b>no payment in 90+ days and no upcoming appointment</b> — review these for removal from the census so they stop showing up on call lists.'
+        inactive: 'Listed as active TRT on the census but <b>no payment in 90+ days and no upcoming appointment</b> — review these for removal from the census so they stop showing up on call lists.',
+        excluded: 'Patients you have marked as no longer on TRT. They stay off every list above. <b>This does not change the census</b> — if they are still on it, remove them there too, otherwise they will keep re-appearing in the census counts. Hit Restore to put someone back.'
       };
       document.getElementById('note').innerHTML = notes[VIEW] +
         ' &nbsp;·&nbsp; <b>Lab schedule:</b> 6 weeks from start date, then 3 months after that, then every 6 months. ' +
