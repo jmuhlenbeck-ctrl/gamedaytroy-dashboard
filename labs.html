@@ -92,10 +92,11 @@
   <div class="main">
     <div class="stats" id="stats"></div>
     <div class="tabs">
-      <button class="tab active" data-v="need" onclick="setView('need')">Needs labs booked</button>
-      <button class="tab" data-v="coming" onclick="setView('coming')">Coming in anyway</button>
-      <button class="tab" data-v="inactive" onclick="setView('inactive')">Verify / census cleanup</button>
+      <button class="tab active" data-v="overdue" onclick="setView('overdue')">Overdue</button>
+      <button class="tab" data-v="soon" onclick="setView('soon')">Due within 30 days</button>
       <button class="tab" data-v="booked" onclick="setView('booked')">Labs booked</button>
+      <button class="tab" data-v="ok" onclick="setView('ok')">Not due yet</button>
+      <button class="tab" data-v="inactive" onclick="setView('inactive')">Verify / census cleanup</button>
     </div>
     <div class="table-card"><div id="host" class="loading">Loading…</div></div>
     <div class="note" id="note"></div>
@@ -119,14 +120,21 @@
     });
     if (new URLSearchParams(location.search).get('demo') === '1') { pinOverlay.classList.add('hidden'); load(); }
 
-    let ROWS = [], VIEW = 'need';
+    let ROWS = [], VIEW = 'overdue';
     const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
 
     function overduePill(days) {
-      if (days == null) return '<span class="pill p-grey">no lab on record</span>';
-      if (days >= 365) return '<span class="pill p-red">' + days + ' days</span>';
-      if (days >= 180) return '<span class="pill p-amber">' + days + ' days</span>';
-      return '<span class="pill p-grey">' + days + ' days</span>';
+      if (days == null) return '<span class="pill p-grey">—</span>';
+      if (days >= 180) return '<span class="pill p-red">' + days + ' days late</span>';
+      if (days >= 60)  return '<span class="pill p-amber">' + days + ' days late</span>';
+      if (days > 0)    return '<span class="pill p-amber">' + days + ' days late</span>';
+      return '<span class="pill p-green">due in ' + Math.abs(days) + 'd</span>';
+    }
+    function stagePill(s) {
+      if (s === 'no lab on record') return '<span class="pill p-red">no lab on record</span>';
+      if (s === '6-week (initial)') return '<span class="pill p-amber">6-week</span>';
+      if (s === '3-month follow-up') return '<span class="pill p-grey">3-month</span>';
+      return '<span class="pill p-grey">6-month</span>';
     }
 
     function setView(v) {
@@ -151,23 +159,23 @@
     function buckets() {
       const active = ROWS.filter(r => !r.likely_inactive);
       return {
-        need: active.filter(r => !r.has_upcoming_lab && !r.has_other_appt),
-        coming: active.filter(r => !r.has_upcoming_lab && r.has_other_appt),
-        booked: active.filter(r => r.has_upcoming_lab),
+        overdue: active.filter(r => r.status === 'overdue'),
+        soon: active.filter(r => r.status === 'due_soon'),
+        booked: active.filter(r => r.status === 'scheduled'),
+        ok: active.filter(r => r.status === 'ok' || r.status === 'unknown'),
         inactive: ROWS.filter(r => r.likely_inactive)
       };
     }
 
     function renderStats() {
       const b = buckets();
-      const gap = b.need.length + b.coming.length;
-      const over6m = b.need.concat(b.coming).filter(r => r.days_since_lab != null && r.days_since_lab >= 180).length;
-      const noHist = b.need.concat(b.coming).filter(r => r.days_since_lab == null).length;
+      const noRec = b.overdue.filter(r => r.lab_stage === 'no lab on record').length;
+      const comingIn = b.overdue.filter(r => r.has_other_appt).length;
       document.getElementById('stats').innerHTML =
-        '<div class="stat overdue"><div class="lbl">No labs booked</div><div class="val">' + gap + '</div></div>' +
-        '<div class="stat overdue"><div class="lbl">6+ months since labs</div><div class="val">' + over6m + '</div></div>' +
-        '<div class="stat"><div class="lbl">No lab history</div><div class="val">' + noHist + '</div></div>' +
-        '<div class="stat soon"><div class="lbl">Coming in anyway</div><div class="val">' + b.coming.length + '</div></div>' +
+        '<div class="stat overdue"><div class="lbl">Overdue for labs</div><div class="val">' + b.overdue.length + '</div></div>' +
+        '<div class="stat soon"><div class="lbl">Due within 30 days</div><div class="val">' + b.soon.length + '</div></div>' +
+        '<div class="stat soon"><div class="lbl">Overdue but coming in</div><div class="val">' + comingIn + '</div></div>' +
+        '<div class="stat"><div class="lbl">No lab on record</div><div class="val">' + noRec + '</div></div>' +
         '<div class="stat ok"><div class="lbl">Labs booked</div><div class="val">' + b.booked.length + '</div></div>' +
         '<div class="stat"><div class="lbl">Verify / cleanup</div><div class="val">' + b.inactive.length + '</div></div>';
       const latest = ROWS.reduce((m, r) => (r.computed_at > m ? r.computed_at : m), '');
@@ -183,27 +191,29 @@
       if (!data.length) { host.className=''; host.innerHTML = '<div class="loading">Nothing here.</div>'; return; }
 
       if (VIEW === 'inactive') {
-        data = data.slice().sort((a,c) => (a.last_payment||'') .localeCompare(c.last_payment||''));
+        data = data.slice().sort((a,c) => (a.last_payment||'').localeCompare(c.last_payment||''));
       } else if (VIEW === 'booked') {
         data = data.slice().sort((a,c) => (a.next_lab_date||'').localeCompare(c.next_lab_date||''));
       } else {
-        // longest-overdue first; patients with no lab history at all go last
-        data = data.slice().sort((a,c) => (c.days_since_lab == null ? -1 : c.days_since_lab) - (a.days_since_lab == null ? -1 : a.days_since_lab));
+        data = data.slice().sort((a,c) => (c.days_overdue == null ? -99999 : c.days_overdue) - (a.days_overdue == null ? -99999 : a.days_overdue));
       }
 
       let h = '<table class="mm"><thead><tr><th>#</th><th>Patient</th><th>Delivery</th>';
       h += (VIEW === 'inactive') ? '<th>Last payment</th><th>Last lab</th>'
-         : (VIEW === 'booked')   ? '<th>Last lab</th><th>Next lab booked</th>'
-         : '<th>Last lab</th><th class="num">Overdue</th>';
+         : (VIEW === 'booked')   ? '<th>Stage</th><th>Last lab</th><th>Next lab booked</th>'
+         : '<th>Stage</th><th>Start</th><th>Last lab</th><th>Labs due</th><th class="num">Status</th>';
       h += '</tr></thead><tbody>';
       data.forEach((r, i) => {
-        h += '<tr><td style="color:var(--text-dim)">' + (i+1) + '</td><td><b>' + r.patient_name + '</b></td><td>' + (r.delivery || '—') + '</td>';
+        h += '<tr><td style="color:var(--text-dim)">' + (i+1) + '</td><td><b>' + r.patient_name + '</b>'
+           + (VIEW !== 'inactive' && VIEW !== 'booked' && r.has_other_appt ? ' <span class="pill p-amber">coming in</span>' : '')
+           + '</td><td>' + (r.delivery || '—') + '</td>';
         if (VIEW === 'inactive') {
           h += '<td>' + fmtDate(r.last_payment) + ' <span class="pill p-red">' + (r.days_since_payment != null ? r.days_since_payment + 'd ago' : 'none') + '</span></td><td>' + fmtDate(r.last_lab_date) + '</td>';
         } else if (VIEW === 'booked') {
-          h += '<td>' + fmtDate(r.last_lab_date) + '</td><td><span class="pill p-green">' + fmtDate(r.next_lab_date) + '</span></td>';
+          h += '<td>' + stagePill(r.lab_stage) + '</td><td>' + fmtDate(r.last_lab_date) + '</td><td><span class="pill p-green">' + fmtDate(r.next_lab_date) + '</span></td>';
         } else {
-          h += '<td>' + fmtDate(r.last_lab_date) + '</td><td class="num">' + overduePill(r.days_since_lab) + '</td>';
+          h += '<td>' + stagePill(r.lab_stage) + '</td><td>' + fmtDate(r.trt_start_date) + '</td><td>' + fmtDate(r.last_lab_date)
+             + '</td><td>' + fmtDate(r.next_lab_due) + '</td><td class="num">' + overduePill(r.days_overdue) + '</td>';
         }
         h += '</tr>';
       });
@@ -211,14 +221,16 @@
       host.className=''; host.innerHTML = h;
 
       const notes = {
-        need: 'Active TRT patients with <b>no lab appointment booked and nothing else scheduled</b> — these need a call. Sorted by longest since last labs.',
-        coming: 'No lab booked, but they already have an injection or consult on the calendar — <b>book labs while they are in the clinic</b>.',
+        overdue: 'Past their scheduled lab date with <b>nothing booked</b> — these need a call. Anyone tagged <b>coming in</b> already has an injection or consult on the calendar, so labs can be booked while they are here.',
+        soon: 'Labs come due in the next 30 days and are not booked yet — get ahead of these.',
         booked: 'Labs already on the calendar. Nothing to do.',
+        ok: 'Not due yet under the lab schedule.',
         inactive: 'Listed as active TRT on the census but <b>no payment in 90+ days and no upcoming appointment</b> — review these for removal from the census so they stop showing up on call lists.'
       };
       document.getElementById('note').innerHTML = notes[VIEW] +
-        ' &nbsp;·&nbsp; Lab history and upcoming appointments come from Lobbie (refreshed by the daily Lobbie Sync bookmarklet); payment activity comes from MXMerchant. ' +
-        'Patients are matched by name across systems.';
+        ' &nbsp;·&nbsp; <b>Lab schedule:</b> 6 weeks from start date, then 3 months after that, then every 6 months. ' +
+        'Start dates come from the Troy census; lab history and upcoming appointments from Lobbie (refreshed by the daily Lobbie Sync bookmarklet); payment activity from MXMerchant. ' +
+        '<b>"No lab on record"</b> means no lab appointment has ever been booked for them in Lobbie (history goes back to Nov 2024) — worth verifying before calling.';
     }
   </script>
 </body>
