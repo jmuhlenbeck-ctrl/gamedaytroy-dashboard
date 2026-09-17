@@ -253,6 +253,11 @@
         census:  [310,316,353,368,395,410,414,385,null,null,null,null],
         starts:  [28,28,37,32,32,33,28,5,null,null,null,null],
         cancels: [5,25,7,15,9,24,null,null,null,null,null,null],
+        // product split only exists from July on, when cancels started being counted live
+        cancelsTrt:   [null,null,null,null,null,null,null,null,null,null,null,null],
+        cancelsGlp1:  [null,null,null,null,null,null,null,null,null,null,null,null],
+        cancelsPep:   [null,null,null,null,null,null,null,null,null,null,null,null],
+        cancelsOther: [null,null,null,null,null,null,null,null,null,null,null,null],
         prp:     [null,null,2800,null,null,null,null,null,null,null,null,null],
         pshotgw: [2500,800,5600,3800,1800,1800,3400,7100,null,null,null,null],
         weight:  [4600,4655,4750,7600,6500,8475,6250,700,null,null,null,null],
@@ -295,9 +300,9 @@
         const [htR, gR, cR, censR, mtdR] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/high_ticket_revenue?select=month,category,total_cents`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/monthly_goals?select=month,revenue_goal&location_slug=eq.${LOCATION}`, { headers: H2 }),
-          fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_by_month?select=month,cancels`, { headers: H2 }),
+          fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_by_month?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_census_counts?select=therapy,active&therapy=eq.trt`, { headers: H2 }),
-          fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_mtd?select=month,cancels`, { headers: H2 })
+          fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_mtd?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 })
         ]);
         const KEY = { prp_hair: 'prp', pshot_gw: 'pshotgw', weight_mgt: 'weight', hgh_peptides: 'hgh' };
         (await htR.json() || []).forEach(x => {
@@ -308,17 +313,20 @@
           const p = x.month.slice(0,7).split('-'); const i = parseInt(p[1]) - 1;
           if (p[0] === '2026' && x.revenue_goal != null) SL.goals[i] = Math.round(Number(x.revenue_goal)/1000) + 'k';
         });
-        (await cR.json() || []).forEach(x => {
+        const applyCancels = (x) => {
           const p = x.month.slice(0,7).split('-'); const i = parseInt(p[1]) - 1;
-          if (p[0] === '2026' && i >= LIVE_FROM) SL.cancels[i] = x.cancels;
-        });
+          if (p[0] !== '2026' || i < LIVE_FROM) return;
+          SL.cancels[i] = x.cancels;                                              // patients, not contracts
+          SL.cancelsTrt[i] = x.cancels_trt;
+          SL.cancelsGlp1[i] = x.cancels_glp1;
+          SL.cancelsPep[i] = x.cancels_peptides;
+          SL.cancelsOther[i] = (x.cancels_labs || 0) + (x.cancels_other || 0);
+        };
+        (await cR.json() || []).forEach(applyCancels);
         // the monthly view can only fill a month once the next month's snapshot exists,
         // so the current month comes from the month-to-date view (refreshed daily)
         const mtd = await mtdR.json();
-        if (Array.isArray(mtd) && mtd[0] && mtd[0].cancels != null) {
-          const p = mtd[0].month.slice(0,7).split('-'); const i = parseInt(p[1]) - 1;
-          if (p[0] === '2026' && i >= LIVE_FROM) SL.cancels[i] = mtd[0].cancels;
-        }
+        if (Array.isArray(mtd) && mtd[0] && mtd[0].cancels != null) applyCancels(mtd[0]);
         const cens = await censR.json();
         if (Array.isArray(cens) && cens[0] && cens[0].active != null) {
           const nowIdx = new Date().getMonth();
@@ -339,7 +347,11 @@
         { sec: 'TRT (MTD)' },
         { label: 'Total census', d: SL.census, f: i0, live: true },
         { label: 'Starts', d: SL.starts, f: i0, live: true },
-        { label: 'Cancels', d: SL.cancels, f: i0, live: true },
+        { label: 'Cancels (patients)', d: SL.cancels, f: i0, live: true },
+        { label: '&nbsp;&nbsp;&nbsp;· TRT', d: SL.cancelsTrt, f: i0, cls: 'muted', live: true },
+        { label: '&nbsp;&nbsp;&nbsp;· GLP-1', d: SL.cancelsGlp1, f: i0, cls: 'muted', live: true },
+        { label: '&nbsp;&nbsp;&nbsp;· Peptides', d: SL.cancelsPep, f: i0, cls: 'muted', live: true },
+        { label: '&nbsp;&nbsp;&nbsp;· Labs / other', d: SL.cancelsOther, f: i0, cls: 'muted', live: true },
         { label: 'No-shows (new consult)', d: SL.noshows, f: i0, live: true },
         { sec: 'High Tickets (MTD)' },
         { label: 'PRP Hair', d: SL.prp, f: m0, live: true },
