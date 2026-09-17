@@ -253,6 +253,8 @@
         census:  [310,316,353,368,395,410,414,385,null,null,null,null],
         starts:  [28,28,37,32,32,33,28,5,null,null,null,null],
         cancels: [5,25,7,15,9,24,null,null,null,null,null,null],
+        recurring:    [null,null,null,null,null,null,null,null,null,null,null,null],
+        recurringPct: [null,null,null,null,null,null,null,null,null,null,null,null],
         // product split only exists from July on, when cancels started being counted live
         cancelsTrt:   [null,null,null,null,null,null,null,null,null,null,null,null],
         cancelsGlp1:  [null,null,null,null,null,null,null,null,null,null,null,null],
@@ -282,10 +284,17 @@
       } catch (e) { /* keep static fallback */ }
       // live revenue (drives MoM too) + live TRT starts
       try {
-        const mr = await fetch(`${SUPABASE_URL}/rest/v1/monthly_metrics?select=month,revenue&location_slug=eq.${LOCATION}&order=month.asc`, {
+        const mr = await fetch(`${SUPABASE_URL}/rest/v1/monthly_metrics?select=month,revenue,recurring_revenue,recurring_pct&location_slug=eq.${LOCATION}&order=month.asc`, {
           headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
         });
-        (await mr.json() || []).forEach(x => { const p = x.month.slice(0,7).split('-'); if (p[0] === '2026' && x.revenue != null && parseInt(p[1])-1 >= 6) SL.revenue[parseInt(p[1])-1] = Number(x.revenue); });
+        (await mr.json() || []).forEach(x => {
+          const p = x.month.slice(0,7).split('-'); const i = parseInt(p[1]) - 1;
+          if (p[0] !== '2026') return;
+          if (x.revenue != null && i >= 6) SL.revenue[i] = Number(x.revenue);
+          // recurring is measured the same way for every month, so fill them all
+          if (x.recurring_revenue != null) SL.recurring[i] = Number(x.recurring_revenue);
+          if (x.recurring_pct != null) SL.recurringPct[i] = Number(x.recurring_pct);
+        });
       } catch (e) { /* keep static fallback */ }
       try {
         const sr = await fetch(`${SUPABASE_URL}/rest/v1/v_trt_starts_by_month?select=month,starts&month=gte.2026-01-01&order=month.asc`, {
@@ -338,12 +347,22 @@
       const m0 = v => v == null ? '' : '$' + Math.round(v).toLocaleString();
       const i0 = v => v == null ? '' : v.toLocaleString();
       const asis = v => v == null ? '' : v;
+      const p1 = v => v == null ? '' : Number(v).toFixed(1) + '%';
+      // month-over-month change in recurring revenue
+      const recGrowth = SL.recurring.map((v, i) => {
+        if (v == null || i === 0) return null;
+        const prev = SL.recurring[i-1];
+        return prev ? (v - prev) / prev * 100 : null;
+      });
       const nCols = (new Date().getFullYear() === 2026) ? (new Date().getMonth() + 1) : 12;
       const defs = [
         { sec: 'Revenue' },
         { label: 'Revenue MTD', d: SL.revenue, f: m0, cls: 'val-rev', live: true },
         { label: 'MoM growth %', d: mom, f: 'g', live: true },
         { label: 'Goal', d: SL.goals, f: asis, cls: 'muted', live: true },
+        { label: 'Recurring revenue', d: SL.recurring, f: m0, live: true },
+        { label: 'Recurring % of revenue', d: SL.recurringPct, f: p1, cls: 'muted', live: true },
+        { label: 'Recurring growth %', d: recGrowth, f: 'g', live: true },
         { sec: 'TRT (MTD)' },
         { label: 'Total census', d: SL.census, f: i0, live: true },
         { label: 'Starts (new TRT patients)', d: SL.starts, f: i0, live: true },
