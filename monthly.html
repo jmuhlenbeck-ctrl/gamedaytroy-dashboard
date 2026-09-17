@@ -292,11 +292,12 @@
       const LIVE_FROM = 6; // index of July
       try {
         const H2 = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-        const [htR, gR, cR, censR] = await Promise.all([
+        const [htR, gR, cR, censR, mtdR] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/high_ticket_revenue?select=month,category,total_cents`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/monthly_goals?select=month,revenue_goal&location_slug=eq.${LOCATION}`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_by_month?select=month,cancels`, { headers: H2 }),
-          fetch(`${SUPABASE_URL}/rest/v1/v_census_counts?select=therapy,active&therapy=eq.trt`, { headers: H2 })
+          fetch(`${SUPABASE_URL}/rest/v1/v_census_counts?select=therapy,active&therapy=eq.trt`, { headers: H2 }),
+          fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_mtd?select=month,cancels`, { headers: H2 })
         ]);
         const KEY = { prp_hair: 'prp', pshot_gw: 'pshotgw', weight_mgt: 'weight', hgh_peptides: 'hgh' };
         (await htR.json() || []).forEach(x => {
@@ -311,6 +312,13 @@
           const p = x.month.slice(0,7).split('-'); const i = parseInt(p[1]) - 1;
           if (p[0] === '2026' && i >= LIVE_FROM) SL.cancels[i] = x.cancels;
         });
+        // the monthly view can only fill a month once the next month's snapshot exists,
+        // so the current month comes from the month-to-date view (refreshed daily)
+        const mtd = await mtdR.json();
+        if (Array.isArray(mtd) && mtd[0] && mtd[0].cancels != null) {
+          const p = mtd[0].month.slice(0,7).split('-'); const i = parseInt(p[1]) - 1;
+          if (p[0] === '2026' && i >= LIVE_FROM) SL.cancels[i] = mtd[0].cancels;
+        }
         const cens = await censR.json();
         if (Array.isArray(cens) && cens[0] && cens[0].active != null) {
           const nowIdx = new Date().getMonth();
