@@ -306,12 +306,13 @@
       const LIVE_FROM = 6; // index of July
       try {
         const H2 = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-        const [htR, gR, cR, censR, mtdR] = await Promise.all([
+        const [htR, gR, cR, censR, mtdR, censEndR] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/high_ticket_revenue?select=month,category,total_cents`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/monthly_goals?select=month,revenue_goal&location_slug=eq.${LOCATION}`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_by_month?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_census_counts?select=therapy,active&therapy=eq.trt`, { headers: H2 }),
-          fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_mtd?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 })
+          fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_mtd?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 }),
+          fetch(`${SUPABASE_URL}/rest/v1/v_census_month_end?select=month,trt_active`, { headers: H2 })
         ]);
         const KEY = { prp_hair: 'prp', pshot_gw: 'pshotgw', weight_mgt: 'weight', hgh_peptides: 'hgh' };
         (await htR.json() || []).forEach(x => {
@@ -341,6 +342,13 @@
           const nowIdx = new Date().getMonth();
           if (nowIdx >= LIVE_FROM) SL.census[nowIdx] = cens[0].active; // census is current-state only
         }
+        // A closed month keeps the census from its last daily snapshot. Without this the
+        // month went blank the day the next one began (September disappeared on Oct 1).
+        // Only fills blanks, so a hand-entered figure is never overwritten.
+        (await censEndR.json() || []).forEach(x => {
+          const p = x.month.split('-'); const i = parseInt(p[1]) - 1;
+          if (p[0] === '2026' && i >= LIVE_FROM && SL.census[i] == null && x.trt_active != null) SL.census[i] = x.trt_active;
+        });
       } catch (e) { /* keep static fallback */ }
       const total = MO.map((_, i) => { const parts = [SL.prp[i], SL.pshotgw[i], SL.weight[i], SL.hgh[i]]; return parts.every(x => x == null) ? null : parts.reduce((s, x) => s + (x || 0), 0); });
       const mom = SL.revenue.map((v, i) => { if (v == null) return null; const prev = i === 0 ? DEC_PREV : SL.revenue[i-1]; return prev ? (v - prev) / prev * 100 : null; });
@@ -401,7 +409,7 @@
         'Rows marked <span style="color:var(--success);font-weight:700;">LIVE</span> are pulled automatically and refresh on their own. ' +
         '<b>July 2026 onward is fully pulled from source data; January&ndash;June are the original hand-kept figures and are left untouched.</b> ' +
         '<b>Revenue</b> comes from MXMerchant and excludes sales tax, so it reads slightly below the old hand-kept gross. <b>Goal</b> comes from the monthly goals table. ' +
-        '<b>Total census</b> is live for the current month only (the census is current-state, so past months cannot be recomputed). ' +
+        '<b>Total census</b> = active TRT patients on the census. The current month is live; each closed month keeps the count from its last day (daily snapshots began Aug 26, 2026). ' +
         '<b>Starts</b> = census start dates in that month. <b>Cancels</b> = subscriptions active at the start of the month that were cancelled by the next month, so it only lands once the month closes. ' +
         '<b>No-shows</b> = new-consult no-shows from Lobbie. <b>High tickets</b> = all non-recurring money collected that month by product, combining Lobbie invoice line items with MXMerchant QuickPay memos ' +
         '(bundled memos naming two products are excluded rather than credited to one). MoM growth is computed from Revenue MTD.';
