@@ -250,7 +250,9 @@
         revenue: [96891,93925,124033,124799,127937,133293,146294,null,null,null,null,null],
         goals:   ['100k','100k','100k','130k','130k','135k','140k','150k',null,null,null,null],
         noshows: [35,13,17,18,24,20,16,13,null,null,null,null],
-        census:  [310,316,353,368,395,410,414,385,null,null,null,null],
+        census:  [310,316,353,368,395,410,414,397,null,null,null,null],   // active TRT; Aug = Aug 31 snapshot (was hand-typed 385)
+        // everyone on the census, counted once even if on two therapies; snapshots only go back to Aug 26
+        censusAll: [null,null,null,null,null,null,null,434,null,null,null,null],
         starts:  [28,28,37,32,32,33,28,5,null,null,null,null],
         cancels: [5,25,7,15,9,24,null,null,null,null,null,null],
         recurring:    [null,null,null,null,null,null,null,null,null,null,null,null],
@@ -312,7 +314,7 @@
           fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_by_month?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_census_counts?select=therapy,active&therapy=eq.trt`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_mtd?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 }),
-          fetch(`${SUPABASE_URL}/rest/v1/v_census_month_end?select=month,trt_active`, { headers: H2 })
+          fetch(`${SUPABASE_URL}/rest/v1/v_census_month_end?select=month,trt_active,all_patients`, { headers: H2 })
         ]);
         const KEY = { prp_hair: 'prp', pshot_gw: 'pshotgw', weight_mgt: 'weight', hgh_peptides: 'hgh' };
         (await htR.json() || []).forEach(x => {
@@ -347,7 +349,9 @@
         // Only fills blanks, so a hand-entered figure is never overwritten.
         (await censEndR.json() || []).forEach(x => {
           const p = x.month.split('-'); const i = parseInt(p[1]) - 1;
-          if (p[0] === '2026' && i >= LIVE_FROM && SL.census[i] == null && x.trt_active != null) SL.census[i] = x.trt_active;
+          if (p[0] !== '2026' || i < LIVE_FROM) return;
+          if (SL.census[i] == null && x.trt_active != null) SL.census[i] = x.trt_active;
+          if (x.all_patients != null) SL.censusAll[i] = x.all_patients;   // the current month's row is today's snapshot
         });
       } catch (e) { /* keep static fallback */ }
       const total = MO.map((_, i) => { const parts = [SL.prp[i], SL.pshotgw[i], SL.weight[i], SL.hgh[i]]; return parts.every(x => x == null) ? null : parts.reduce((s, x) => s + (x || 0), 0); });
@@ -371,8 +375,10 @@
         { label: 'Recurring revenue', d: SL.recurring, f: m0, live: true },
         { label: 'Recurring % of revenue', d: SL.recurringPct, f: p1, cls: 'muted', live: true },
         { label: 'Recurring growth %', d: recGrowth, f: 'g', live: true },
+        { sec: 'Census' },
+        { label: 'Total census (patients)', d: SL.censusAll, f: i0, live: true },
+        { label: 'Total TRT', d: SL.census, f: i0, live: true },
         { sec: 'TRT (MTD)' },
-        { label: 'Total census', d: SL.census, f: i0, live: true },
         { label: 'Starts (new TRT patients)', d: SL.starts, f: i0, live: true },
         { label: 'Cancels (patients)', d: SL.cancels, f: i0, live: true },
         { label: '&nbsp;&nbsp;&nbsp;↳ cancels: TRT', d: SL.cancelsTrt, f: i0, cls: 'muted', live: true },
@@ -409,7 +415,7 @@
         'Rows marked <span style="color:var(--success);font-weight:700;">LIVE</span> are pulled automatically and refresh on their own. ' +
         '<b>July 2026 onward is fully pulled from source data; January&ndash;June are the original hand-kept figures and are left untouched.</b> ' +
         '<b>Revenue</b> comes from MXMerchant and excludes sales tax, so it reads slightly below the old hand-kept gross. <b>Goal</b> comes from the monthly goals table. ' +
-        '<b>Total census</b> = active TRT patients on the census. The current month is live; each closed month keeps the count from its last day (daily snapshots began Aug 26, 2026). ' +
+        '<b>Total census</b> = every active patient on the census across TRT, peptides and GLP-1, counted once even if they are on two therapies; it starts in August because daily census snapshots began Aug 26, 2026. <b>Total TRT</b> = active TRT patients. For both, the current month is live and each closed month keeps the count from its last day. ' +
         '<b>Starts</b> = census start dates in that month. <b>Cancels</b> = subscriptions active at the start of the month that were cancelled by the next month, so it only lands once the month closes. ' +
         '<b>No-shows</b> = new-consult no-shows from Lobbie. <b>High tickets</b> = all non-recurring money collected that month by product, combining Lobbie invoice line items with MXMerchant QuickPay memos ' +
         '(bundled memos naming two products are excluded rather than credited to one). MoM growth is computed from Revenue MTD.';
