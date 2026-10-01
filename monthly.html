@@ -262,6 +262,8 @@
         cancelsGlp1:  [null,null,null,null,null,null,null,null,null,null,null,null],
         cancelsPep:   [null,null,null,null,null,null,null,null,null,null,null,null],
         cancelsOther: [null,null,null,null,null,null,null,null,null,null,null,null],
+        // true where a month's cancel count measured the wrong window (late 1st-of-month snapshot)
+        cancelsPartial: [false,false,false,false,false,false,false,false,false,false,false,false],
         prp:     [null,null,2800,null,null,null,null,null,null,null,null,null],
         pshotgw: [2500,800,5600,3800,1800,1800,3400,7100,null,null,null,null],
         weight:  [4600,4655,4750,7600,6500,8475,6250,700,null,null,null,null],
@@ -308,13 +310,14 @@
       const LIVE_FROM = 6; // index of July
       try {
         const H2 = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-        const [htR, gR, cR, censR, mtdR, censEndR] = await Promise.all([
+        const [htR, gR, cR, censR, mtdR, censEndR, capR] = await Promise.all([
           fetch(`${SUPABASE_URL}/rest/v1/high_ticket_revenue?select=month,category,total_cents`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/monthly_goals?select=month,revenue_goal&location_slug=eq.${LOCATION}`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_by_month?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_census_counts?select=therapy,active&therapy=eq.trt`, { headers: H2 }),
           fetch(`${SUPABASE_URL}/rest/v1/v_subscription_cancels_mtd?select=month,cancels,cancels_trt,cancels_glp1,cancels_peptides,cancels_labs,cancels_other`, { headers: H2 }),
-          fetch(`${SUPABASE_URL}/rest/v1/v_census_month_end?select=month,trt_active,all_patients`, { headers: H2 })
+          fetch(`${SUPABASE_URL}/rest/v1/v_census_month_end?select=month,trt_active,all_patients`, { headers: H2 }),
+          fetch(`${SUPABASE_URL}/rest/v1/v_subscription_snapshot_capture?select=snapshot_month,days_late`, { headers: H2 })
         ]);
         const KEY = { prp_hair: 'prp', pshot_gw: 'pshotgw', weight_mgt: 'weight', hgh_peptides: 'hgh' };
         (await htR.json() || []).forEach(x => {
@@ -339,6 +342,16 @@
         // so the current month comes from the month-to-date view (refreshed daily)
         const mtd = await mtdR.json();
         if (Array.isArray(mtd) && mtd[0] && mtd[0].cancels != null) applyCancels(mtd[0]);
+        // Cancels compare the 1st-of-month subscription snapshot with the next one. July's was
+        // taken Jul 31 and August's Aug 26, so those months counted the wrong window. Flag any
+        // month whose own snapshot, or the next month's, was taken more than 3 days late.
+        const late = {};
+        (await capR.json() || []).forEach(x => { late[String(x.snapshot_month).slice(0, 7)] = Number(x.days_late); });
+        for (let i = LIVE_FROM; i < 12; i++) {
+          if (SL.cancels[i] == null) continue;
+          const m = `2026-${String(i + 1).padStart(2, '0')}`, next = i < 11 ? `2026-${String(i + 2).padStart(2, '0')}` : '2027-01';
+          SL.cancelsPartial[i] = (late[m] == null || late[m] > 3) || (late[next] != null && late[next] > 3);
+        }
         const cens = await censR.json();
         if (Array.isArray(cens) && cens[0] && cens[0].active != null) {
           const nowIdx = new Date().getMonth();
@@ -380,11 +393,11 @@
         { label: 'Total TRT', d: SL.census, f: i0, live: true },
         { sec: 'TRT (MTD)' },
         { label: 'Starts (new TRT patients)', d: SL.starts, f: i0, live: true },
-        { label: 'Cancels (patients)', d: SL.cancels, f: i0, live: true },
-        { label: '&nbsp;&nbsp;&nbsp;↳ cancels: TRT', d: SL.cancelsTrt, f: i0, cls: 'muted', live: true },
-        { label: '&nbsp;&nbsp;&nbsp;↳ cancels: GLP-1', d: SL.cancelsGlp1, f: i0, cls: 'muted', live: true },
-        { label: '&nbsp;&nbsp;&nbsp;↳ cancels: Peptides', d: SL.cancelsPep, f: i0, cls: 'muted', live: true },
-        { label: '&nbsp;&nbsp;&nbsp;↳ cancels: Labs / other', d: SL.cancelsOther, f: i0, cls: 'muted', live: true },
+        { label: 'Cancels (patients)', d: SL.cancels, f: i0, live: true, flag: SL.cancelsPartial },
+        { label: '&nbsp;&nbsp;&nbsp;↳ cancels: TRT', d: SL.cancelsTrt, f: i0, cls: 'muted', live: true, flag: SL.cancelsPartial },
+        { label: '&nbsp;&nbsp;&nbsp;↳ cancels: GLP-1', d: SL.cancelsGlp1, f: i0, cls: 'muted', live: true, flag: SL.cancelsPartial },
+        { label: '&nbsp;&nbsp;&nbsp;↳ cancels: Peptides', d: SL.cancelsPep, f: i0, cls: 'muted', live: true, flag: SL.cancelsPartial },
+        { label: '&nbsp;&nbsp;&nbsp;↳ cancels: Labs / other', d: SL.cancelsOther, f: i0, cls: 'muted', live: true, flag: SL.cancelsPartial },
         { label: 'No-shows (new consult)', d: SL.noshows, f: i0, live: true },
         { sec: 'High Tickets (MTD)' },
         { label: 'PRP Hair', d: SL.prp, f: m0, live: true },
@@ -405,6 +418,7 @@
           let cell;
           if (def.f === 'g') cell = growth(v);
           else { const txt = def.f(v); cell = (def.cls && txt !== '') ? `<span class="${def.cls}">${txt}</span>` : txt; }
+          if (def.flag && def.flag[i] && cell !== '') cell = `<span title="Incomplete: this month's subscription snapshot was not taken on the 1st">${cell}*</span>`;
           html += `<td class="num${def.live ? ' sl-live' : ''}">${cell}</td>`;
         }
         html += '</tr>';
@@ -417,6 +431,7 @@
         '<b>Revenue</b> comes from MXMerchant and excludes sales tax, so it reads slightly below the old hand-kept gross. <b>Goal</b> comes from the monthly goals table. ' +
         '<b>Total census</b> = every active patient on the census across TRT, peptides and GLP-1, counted once even if they are on two therapies; it starts in August because daily census snapshots began Aug 26, 2026. <b>Total TRT</b> = active TRT patients. For both, the current month is live and each closed month keeps the count from its last day. ' +
         '<b>Starts</b> = census start dates in that month. <b>Cancels</b> = subscriptions active at the start of the month that were cancelled by the next month, so it only lands once the month closes. ' +
+        (SL.cancelsPartial.some(Boolean) ? '<b>* Cancels marked with an asterisk are incomplete:</b> they compare the subscription snapshot taken on the 1st with the next month&rsquo;s, and the July snapshot was not taken until Jul 31 and August&rsquo;s until Aug 26, so those months counted the wrong days. September is the first month counted correctly. ' : '') +
         '<b>No-shows</b> = new-consult no-shows from Lobbie. <b>High tickets</b> = all non-recurring money collected that month by product, combining Lobbie invoice line items with MXMerchant QuickPay memos ' +
         '(bundled memos naming two products are excluded rather than credited to one). MoM growth is computed from Revenue MTD.';
     }
